@@ -9,7 +9,7 @@ uniform vec3 viewPos;
 
 void main()
 {
-	vec3 color = vec3(0.0, 0.3, 1.0);
+	vec3 color = vec3(0.2, 0.1, 1.0);
     float   dist = length(FragPos - viewPos);
 
     if (dist > fogDistance + 10)
@@ -17,7 +17,6 @@ void main()
 
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 
-    dist = 1 - dist;
-
-    FragColor = vec4(color * dist, 0.65);
+    color = mix(color, vec3(0.4, 0.4, 1.0), dist);
+    FragColor = vec4(color, 0.65);
 }

@@ -112,6 +112,7 @@ void	update(ShaderManager *shaders)
 	Shader	*textShader = shaders->get("text");
 	Shader	*meshShader = shaders->get("mesh");
 	Shader	*waterShader = shaders->get("water");
+	Shader	*postShader = shaders->get("post");
 
 	textShader->use();
 	textShader->setFloat("time", glfwGetTime());
@@ -123,6 +124,9 @@ void	update(ShaderManager *shaders)
 	CAMERA->setViewMatrix(*waterShader);
 	waterShader->setVec3("viewPos", CAMERA->pos);
 	waterShader->setFloat("time", glfwGetTime());
+	postShader->use();
+	postShader->setVec3("viewPos", CAMERA->pos);
+	postShader->setFloat("time", glfwGetTime());
 }
 
 void	frame_key_hook(Window &window)
@@ -284,7 +288,9 @@ void	render(Mesh &mesh, Mesh &waterMesh)
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
 	mesh.draw(SHADER_MANAGER->get("mesh"));
+	glDisable(GL_CULL_FACE);
 	waterMesh.draw(SHADER_MANAGER->get("water"));
+	glEnable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
@@ -301,13 +307,14 @@ void	handleSIGINT(int)
 }
 
 float quadVertices[] = {
-// positions // texCoords
--1.0f, 1.0f, 0.0f, 1.0f,
--1.0f, -1.0f, 0.0f, 0.0f,
-1.0f, -1.0f, 1.0f, 0.0f,
--1.0f, 1.0f, 0.0f, 1.0f,
-1.0f, -1.0f, 1.0f, 0.0f,
-1.0f, 1.0f, 1.0f, 1.0f
+    // positions     // texCoords
+    1.0f, -1.0f,      1.0f, 0.0f,
+   -1.0f, -1.0f,      0.0f, 0.0f,
+   -1.0f,  1.0f,      0.0f, 1.0f,
+
+    1.0f,  1.0f,      1.0f, 1.0f,
+    1.0f, -1.0f,      1.0f, 0.0f,
+   -1.0f,  1.0f,      0.0f, 1.0f
 };
 
 int	main(int ac, char **av)
@@ -395,6 +402,8 @@ int	main(int ac, char **av)
 		
 		glBindVertexArray(0);
 
+		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
+
 		while (WINDOW->up())
 		{
 			WINDOW->loopStart();
@@ -403,27 +412,38 @@ int	main(int ac, char **av)
 
 			update();
 
+			//Resize buffers to window
+			glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-			glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 
 			render(mesh, waterMesh);
-			
+
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glDisable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT);
 			SHADER_MANAGER->get("post")->use();
 			glBindVertexArray(quadVAO);
+			
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
-
+			
 			drawUI();
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();
 		}
+		glDeleteFramebuffers(1, &framebuffer);
+		glDeleteTextures(1, &texColorBuffer);
+		glDeleteRenderbuffers(1, &rbo);
+		glDeleteVertexArrays(1, &quadVAO);
+		glDeleteBuffers(1, &quadVBO);
 	} catch (const std::exception &e) {
 		std::cerr << "An error occurred: " << e.what() << std::endl;
 		return (1);

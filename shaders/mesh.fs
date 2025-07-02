@@ -30,7 +30,7 @@ void main()
 
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 
-    dist = 1 - dist;
+    color = mix(color, vec3(0.4, 0.4, 1.0), dist);
 
-    FragColor = vec4(color * dist, 1.0);
+    FragColor = vec4(color, 1.0);
 }

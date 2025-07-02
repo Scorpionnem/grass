@@ -57,7 +57,7 @@ Window::Window() : _lastFrame(0)
 	glfwSetInputMode(this->getWindowData(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	glfwSetCursorPosCallback(this->getWindowData(), move_mouse_hook);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.4, 0.4, 1.0, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 	this->center();
 	this->setIcon("textures/mbatty.bmp");
