@@ -1,0 +1,15 @@
+# Ignore objects
+obj/
+*.o
+*.d
+particle-system
+
+# Ignore external libraries (They are cloned by the Makefile)
+GLFW/
+src/glad/
+includes/glad/
+glm/
+
+# Ignore useless things
+*.png
+.vscode/
