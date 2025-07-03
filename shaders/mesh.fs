@@ -23,10 +23,20 @@ void main()
 
     float steepness = 1.0f - dot(Normal, vec3(0, 1, 0));
 
+    float   shininess = 128.0f;
+    float   actualShiness = 0.1;
+
     if (steepness < 0.06)
+    {
         color = texture(grass_texture, FragPos.xz).rgb;
+        shininess = 16.0f;
+        actualShiness = 0.05;
+    }
     else
+    {
         color = texture(stone_texture, FragPos.xz).rgb;
+        actualShiness = 0.1;
+    }
 
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 
@@ -37,9 +47,6 @@ void main()
     vec3    lightAmbient = vec3(0.2f, 0.2f, 0.2f);
     vec3    lightDiffuse = vec3(0.5f, 0.5f, 0.5f);
     vec3    lightSpecular = vec3(1.0f, 1.0f, 1.0f);
-    
-    float   shininess = 128.0f;
-    float   actualShiness = 0.1;
 
     vec3 ambient = lightAmbient * color;
 
