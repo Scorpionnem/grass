@@ -2,7 +2,7 @@
 obj/
 *.o
 *.d
-particle-system
+grass
 
 # Ignore external libraries (They are cloned by the Makefile)
 GLFW/
