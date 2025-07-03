@@ -45,7 +45,7 @@ float fbm(vec2 p)
     return value;
 }
 
-float   amplitude = 60.0;
+float   amplitude = 50.0;
 float   scale = 0.01;
 
 float height(vec2 pos)

@@ -118,12 +118,15 @@ void	update(ShaderManager *shaders)
 	textShader->setFloat("time", glfwGetTime());
 	textShader->setFloat("SCREEN_WIDTH", SCREEN_WIDTH);
 	textShader->setFloat("SCREEN_HEIGHT", SCREEN_HEIGHT);
+
 	CAMERA->setViewMatrix(*meshShader);
 	meshShader->setVec3("viewPos", CAMERA->pos);
 	meshShader->setFloat("time", glfwGetTime());
+
 	CAMERA->setViewMatrix(*waterShader);
 	waterShader->setVec3("viewPos", CAMERA->pos);
 	waterShader->setFloat("time", glfwGetTime());
+
 	postShader->use();
 	postShader->setVec3("viewPos", CAMERA->pos);
 	postShader->setFloat("time", glfwGetTime());
@@ -281,9 +284,8 @@ class	Mesh
 
 void	render(Mesh &mesh, Mesh &waterMesh)
 {
-	// SKYBOX->draw(*CAMERA, *SHADER_MANAGER->get("skybox"));
+	SKYBOX->draw(*CAMERA, *SHADER_MANAGER->get("skybox"));
 
-	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
@@ -291,7 +293,6 @@ void	render(Mesh &mesh, Mesh &waterMesh)
 	glDisable(GL_CULL_FACE);
 	waterMesh.draw(SHADER_MANAGER->get("water"));
 	glEnable(GL_CULL_FACE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void	update()
