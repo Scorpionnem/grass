@@ -13,14 +13,6 @@ uniform sampler2D   grass_texture;
 uniform sampler2D   stone_texture;
 uniform sampler2D   snow_texture;
 
-vec3    lightDirection = vec3(-0.8f, -0.4f, -0.45f);
-vec3    lightAmbient = vec3(0.2f, 0.2f, 0.2f);
-vec3    lightDiffuse = vec3(0.5f, 0.5f, 0.5f);
-vec3    lightSpecular = vec3(1.0f, 1.0f, 1.0f);
-
-float   shininess = 128.0f;
-float   actualShiness = 0.1;
-
 void main()
 {
 	vec3 color = Normal;
@@ -38,6 +30,17 @@ void main()
 
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 
+
+
+
+    vec3    lightDirection = vec3(-0.8f, -0.4f, -0.45f);
+    vec3    lightAmbient = vec3(0.2f, 0.2f, 0.2f);
+    vec3    lightDiffuse = vec3(0.5f, 0.5f, 0.5f);
+    vec3    lightSpecular = vec3(1.0f, 1.0f, 1.0f);
+    
+    float   shininess = 128.0f;
+    float   actualShiness = 0.1;
+
     vec3 ambient = lightAmbient * color;
 
     vec3 norm = normalize(Normal);
@@ -51,6 +54,9 @@ void main()
     vec3 specular = lightSpecular * spec * actualShiness;  
         
     vec3 result = ambient + diffuse + specular;
+
+
+
 
     result = mix(result, vec3(0.6, 0.8, 1.0), dist);
     FragColor = vec4(result, 1.0);
