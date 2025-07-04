@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/25 11:56:33 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/04 12:15:14 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@
 #include "Window.hpp"
 #include "Texture.hpp"
 #include "Skybox.hpp"
+
+unsigned int	lolTexID;
 
 float	FOV = 65;
 float	SCREEN_WIDTH = 800;
@@ -71,6 +73,8 @@ void	build(ShaderManager *shader)
 	shader->load({"mesh", "shaders/mesh.vs", "shaders/mesh.fs"});
 	shader->load({"water", "shaders/water.vs", "shaders/water.fs"});
 	shader->load({"post", "shaders/post.vs", "shaders/post.fs"});
+	
+	shader->load({"test", "shaders/test.vs", "shaders/test.fs"});
 
 	shader->get("text")->use();
 	shader->get("text")->setInt("tex0", 0);
@@ -82,6 +86,9 @@ void	build(ShaderManager *shader)
 	shader->get("mesh")->setInt("snow_texture", 2);
 	shader->get("post")->use();
 	shader->get("post")->setInt("screenTexture", 0);
+	
+	shader->get("test")->use();
+	shader->get("test")->setInt("screenTexture", 0);
 }
 
 std::string	getFPSString()
@@ -290,9 +297,7 @@ void	render(Mesh &mesh, Mesh &waterMesh)
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
 	mesh.draw(SHADER_MANAGER->get("mesh"));
-	glDisable(GL_CULL_FACE);
 	waterMesh.draw(SHADER_MANAGER->get("water"));
-	glEnable(GL_CULL_FACE);
 }
 
 void	update()
@@ -317,6 +322,146 @@ float quadVertices[] = {
     1.0f, -1.0f,      1.0f, 0.0f,
    -1.0f,  1.0f,      0.0f, 1.0f
 };
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO = 0;
+
+class	FrameBuffer
+{
+	public:
+		FrameBuffer()
+		{
+			glGenFramebuffers(1, &frameBufferID);
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
+
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
+
+			glGenRenderbuffers(1, &RBO);
+			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+			
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			FrameBuffer::loadQuadModel();
+		}
+		~FrameBuffer()
+		{
+			glDeleteFramebuffers(1, &frameBufferID);
+			glDeleteTextures(1, &textureID);
+			glDeleteRenderbuffers(1, &RBO);
+			if (quadVAO != 0)
+				glDeleteVertexArrays(1, &quadVAO);
+			if (quadVBO != 0)
+				glDeleteBuffers(1, &quadVBO);
+
+			quadVAO = 0;
+			quadVBO = 0;
+		}
+		void	resize(float width, float height)
+		{
+			glBindTexture(GL_TEXTURE_2D, this->textureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+		}
+		void	resizeToWindow()
+		{
+			glBindTexture(GL_TEXTURE_2D, this->textureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+		}
+		void	use()
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, this->frameBufferID);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glEnable(GL_DEPTH_TEST);
+		}
+		//Resets back to the main frame (The one drawn on screen)
+		static void	reset()
+		{
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glDisable(GL_DEPTH_TEST);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+		static void	loadQuadModel()
+		{
+			if (quadVAO != 0 || quadVBO != 0)
+				return ;
+				
+			glGenVertexArrays(1, &quadVAO);
+			glGenBuffers(1, &quadVBO);
+			
+			glBindVertexArray(quadVAO);
+			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+			
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+			
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+			
+			glBindVertexArray(0);
+		}
+		//Will draw the texture using the shader on the currently bound frame.
+		static void	drawFrame(Shader *shader, unsigned int texture)
+		{
+			loadQuadModel();
+
+			shader->use();
+			glBindVertexArray(quadVAO);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+		unsigned int	getTexture()
+		{
+			return (textureID);
+		}
+	private:
+		unsigned int frameBufferID;
+		unsigned int textureID;
+		unsigned int RBO;
+};
+
+void	drawNoPost()
+{
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	Shader	*test = SHADER_MANAGER->get("test");
+	CAMERA->setViewMatrix(*test);
+
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0.0f));
+    model = glm::scale(model, glm::vec3(SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3, 1.0f));
+
+    glm::mat4 projection = glm::ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f);
+				
+	test->setMat4("projection", projection);
+	test->setMat4("model", model);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, lolTexID);
+
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+}
 
 int	main(int ac, char **av)
 {
@@ -343,6 +488,8 @@ int	main(int ac, char **av)
 		Mesh	mesh;
 		Mesh	waterMesh;
 
+		FrameBuffer	framebuffer;
+
 		unsigned int	mapSize = 1000;
 
 		mesh.generatePlane(mapSize, mapSize);
@@ -358,52 +505,9 @@ int	main(int ac, char **av)
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		unsigned int framebuffer;
-		glGenFramebuffers(1, &framebuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-		// generate texture
-		unsigned int texColorBuffer;
-		glGenTextures(1, &texColorBuffer);
-		glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		// attach it to currently bound framebuffer object
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
-
-		unsigned int rbo;
-		glGenRenderbuffers(1, &rbo);
-		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		unsigned int quadVAO;
-		unsigned int quadVBO;
-
-		glGenVertexArrays(1, &quadVAO);
-		glGenBuffers(1, &quadVBO);
-	
-		glBindVertexArray(quadVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-	
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-		
-		glBindVertexArray(0);
-
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
+
+		lolTexID = framebuffer.getTexture();
 
 		while (WINDOW->up())
 		{
@@ -413,38 +517,22 @@ int	main(int ac, char **av)
 
 			update();
 
-			//Resize buffers to window
-			glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-			glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			glEnable(GL_DEPTH_TEST);
+			framebuffer.resizeToWindow();
+			framebuffer.use();
 
 			render(mesh, waterMesh);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDisable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT);
-			SHADER_MANAGER->get("post")->use();
-			glBindVertexArray(quadVAO);
-			
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			
+			FrameBuffer::reset();
+
+			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
+
 			drawUI();
+
+			drawNoPost();
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();
 		}
-		glDeleteFramebuffers(1, &framebuffer);
-		glDeleteTextures(1, &texColorBuffer);
-		glDeleteRenderbuffers(1, &rbo);
-		glDeleteVertexArrays(1, &quadVAO);
-		glDeleteBuffers(1, &quadVBO);
 	} catch (const std::exception &e) {
 		std::cerr << "An error occurred: " << e.what() << std::endl;
 		return (1);

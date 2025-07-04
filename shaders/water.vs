@@ -44,17 +44,20 @@ float fbm(vec2 p)
     return value;
 }
 
-float   amplitude = 10.0;
-float   scale = 0.008;
+float   amplitude = 5.0;
+float   scale = 0.016;
+
+float   animSpeed = 50;
 
 float height(vec2 pos)
 {
-    return fbm(pos * scale) * amplitude;
+    return fbm(pos * scale + (time / animSpeed)) * amplitude;
 }
 
 float   water_level = 15.0;
 
-vec3 calculateNormal(vec2 pos) {
+vec3 calculateNormal(vec2 pos)
+{
     float delta = 0.001;
 
     float hL = height(pos - vec2(delta, 0.0));
@@ -76,12 +79,14 @@ void main()
 
     pos.y = water_level;
 
-    float n = fbm(pos.xz * scale + (time / 10));
+    vec3    tmpos = pos;
+
+    float n = fbm(pos.xz * scale + (time / animSpeed));
     pos.y += n * amplitude;
 
     FragPos = pos;
 
-    Normal = mat3(transpose(inverse(model))) * calculateNormal(pos.xz);
+    Normal = mat3(transpose(inverse(model))) * calculateNormal(tmpos.xz);
 
     gl_Position = projection * view * model * vec4(pos, 1.0);
 }

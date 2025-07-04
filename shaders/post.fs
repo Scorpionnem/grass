@@ -2,6 +2,7 @@
 
 out vec4 FragColor;
 in vec2 TexCoords;
+in vec2 FragPos;
 
 bool	isUnderwater = false;
 
@@ -44,8 +45,8 @@ float fbm(vec2 p)
     return value;
 }
 
-float   amplitude = 10.0;
-float   scale = 0.008;
+float   amplitude = 5.0;
+float   scale = 0.016;
 
 float height(vec2 pos)
 {
@@ -56,19 +57,19 @@ float   water_level = 15.0;
 
 void main()
 {
+	vec2	uv = TexCoords;
 	float	waterLevel = water_level;
-	float n = fbm(viewPos.xz * scale + (time / 10));
+	float n = fbm(viewPos.xz * scale + (time / 50));
     waterLevel += n * amplitude;
 
 	if (viewPos.y < waterLevel)
 		isUnderwater = true;
 
-	vec2	uv = TexCoords;
 	vec3 color = texture(screenTexture, uv).rgb;
 
 	if (isUnderwater)
 	{
-		color += vec3(0.2, 0.1, 1.0) / 2;
+		color += vec3(0.2, 0.4, 1.0) / 2;
 		color -= vec3(0.1);
 	}
 
