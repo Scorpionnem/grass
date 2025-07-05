@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/05 13:55:33 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/05 17:42:10 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ unsigned int	lolTexID;
 float	FOV = 65;
 float	SCREEN_WIDTH = 860;
 float	SCREEN_HEIGHT = 520;
-float	RENDER_DISTANCE = 1000;
+float	RENDER_DISTANCE = 448;
 
 bool	F3 = false;
 bool	PAUSED = false;
@@ -144,10 +144,12 @@ void	update(ShaderManager *shaders)
 	ACTIVE_CAMERA->setViewMatrix(*meshShader);
 	meshShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	meshShader->setFloat("time", glfwGetTime());
+	meshShader->setFloat("RENDER_DISTANCE", RENDER_DISTANCE);
 
 	ACTIVE_CAMERA->setViewMatrix(*waterShader);
 	waterShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	waterShader->setFloat("time", glfwGetTime());
+	waterShader->setFloat("RENDER_DISTANCE", RENDER_DISTANCE);
 }
 
 void	frame_key_hook(Window &window)
@@ -222,6 +224,7 @@ class	Mesh
 		{
 			model = glm::mat4(1.0);
 			pos = glm::vec3(0);
+			scale = glm::vec3(1);
 			glGenVertexArrays(1, &VAO);
 			glGenBuffers(1, &VBO);
 			glGenBuffers(1, &EBO);
@@ -267,6 +270,8 @@ class	Mesh
 			model = glm::mat4(1);
 
 			model = glm::translate(model, pos);
+
+			model = glm::scale(model, scale);
 
 			shader->setMat4("model", model);
 
@@ -342,11 +347,14 @@ class	Mesh
 			};
 		}
 		glm::vec3	getPos(){return (this->pos);}
+		glm::vec3	getScale(){return (this->scale);}
 		void	setPos(glm::vec3 pos){this->pos = pos;}
+		void	setScale(glm::vec3 scale){this->scale = scale;}
 	private:
 		std::vector<glm::vec3>	vertices;
 		std::vector<unsigned int>	indices;
 		glm::vec3		pos;
+		glm::vec3		scale;
 		unsigned int	VAO;
 		unsigned int	VBO;
 		unsigned int	EBO;
@@ -355,7 +363,7 @@ class	Mesh
 
 std::vector<Mesh *>	terrainMeshes;
 std::vector<Mesh *>	waterMeshes;
-		
+
 void	render()
 {
 	SKYBOX->draw(*ACTIVE_CAMERA, *SHADER_MANAGER->get("skybox"));
@@ -364,10 +372,10 @@ void	render()
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
 	for (Mesh *terrainMesh : terrainMeshes)
-		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < 320)
+		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < RENDER_DISTANCE - 64)
     		terrainMesh->draw(SHADER_MANAGER->get("mesh"));
 	for (Mesh *terrainMesh : waterMeshes)
-		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < 320)
+		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < RENDER_DISTANCE - 64)
 			terrainMesh->draw(SHADER_MANAGER->get("water"));
 }
 
@@ -465,7 +473,7 @@ int	main(int ac, char **av)
 
 		ACTIVE_CAMERA = CAMERA;
 
-		framebuffer2.resize(160, 90);
+		framebuffer2.resize(215, 130);
 		framebuffer.resize(860, 520); //Lethal company size lol
 		
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
@@ -501,8 +509,11 @@ int	main(int ac, char **av)
 			SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(1.0, 0.0, 0.0));
 			player.draw(SHADER_MANAGER->get("cube"));
 
-			if (frame ++ >= currentFPS / 16)
+			player.setScale(glm::vec3(1, 1, 1));
+
+			if (frame++ >= currentFPS / 16)
 			{
+				RENDER_DISTANCE = 256;
 				ACTIVE_CAMERA = &teste;
 				framebuffer2.use();
 				update(SHADER_MANAGER);
@@ -516,7 +527,8 @@ int	main(int ac, char **av)
 				ACTIVE_CAMERA = CAMERA;
 				frame = 0;
 			}
-			teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
+			RENDER_DISTANCE = 448;
+			teste.yaw = 24 + cos(glfwGetTime()) * 10;
 
 			FrameBuffer::reset();
 

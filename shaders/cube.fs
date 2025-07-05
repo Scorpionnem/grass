@@ -11,5 +11,5 @@ uniform sampler2D   camtexture;
 
 void main()
 {
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(abs(FragPos), 1.0);
 }

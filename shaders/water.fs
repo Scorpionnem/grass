@@ -4,7 +4,8 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 
-float   fogDistance = 256;
+uniform float RENDER_DISTANCE;
+float   fogDistance = RENDER_DISTANCE - 128;
 
 uniform vec3 viewPos;
 

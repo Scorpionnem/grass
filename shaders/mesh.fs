@@ -7,7 +7,8 @@ in vec3	FragPos;
 
 uniform vec3    viewPos;
 
-float   fogDistance = 256;
+uniform float RENDER_DISTANCE;
+float   fogDistance = RENDER_DISTANCE - 128;
 
 uniform sampler2D   grass_texture;
 uniform sampler2D   stone_texture;
