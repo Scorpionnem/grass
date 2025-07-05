@@ -37,6 +37,8 @@ Window				*WINDOW;
 Camera				*CAMERA;
 Skybox				*SKYBOX;
 
+Camera				*ACTIVE_CAMERA;
+
 TextureManager		*TEXTURE_MANAGER;
 
 ShaderManager		*SHADER_MANAGER;
@@ -114,29 +116,33 @@ void	drawUI()
 	glEnable(GL_DEPTH_TEST);
 }
 
+void	updatePostShader(ShaderManager *shaders)
+{
+	Shader	*postShader = shaders->get("post");
+
+	postShader->use();
+	postShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
+	postShader->setFloat("time", glfwGetTime());
+}
+
 void	update(ShaderManager *shaders)
 {
 	Shader	*textShader = shaders->get("text");
 	Shader	*meshShader = shaders->get("mesh");
 	Shader	*waterShader = shaders->get("water");
-	Shader	*postShader = shaders->get("post");
 
 	textShader->use();
 	textShader->setFloat("time", glfwGetTime());
 	textShader->setFloat("SCREEN_WIDTH", SCREEN_WIDTH);
 	textShader->setFloat("SCREEN_HEIGHT", SCREEN_HEIGHT);
 
-	CAMERA->setViewMatrix(*meshShader);
-	meshShader->setVec3("viewPos", CAMERA->pos);
+	ACTIVE_CAMERA->setViewMatrix(*meshShader);
+	meshShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	meshShader->setFloat("time", glfwGetTime());
 
-	CAMERA->setViewMatrix(*waterShader);
-	waterShader->setVec3("viewPos", CAMERA->pos);
+	ACTIVE_CAMERA->setViewMatrix(*waterShader);
+	waterShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	waterShader->setFloat("time", glfwGetTime());
-
-	postShader->use();
-	postShader->setVec3("viewPos", CAMERA->pos);
-	postShader->setFloat("time", glfwGetTime());
 }
 
 void	frame_key_hook(Window &window)
@@ -291,7 +297,7 @@ class	Mesh
 
 void	render(Mesh &mesh, Mesh &waterMesh)
 {
-	SKYBOX->draw(*CAMERA, *SHADER_MANAGER->get("skybox"));
+	SKYBOX->draw(*ACTIVE_CAMERA, *SHADER_MANAGER->get("skybox"));
 
 	TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
@@ -339,8 +345,8 @@ class	FrameBuffer
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
 
@@ -356,6 +362,7 @@ class	FrameBuffer
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			FrameBuffer::loadQuadModel();
+			this->resizeToWindow();
 		}
 		~FrameBuffer()
 		{
@@ -370,8 +377,13 @@ class	FrameBuffer
 			quadVAO = 0;
 			quadVBO = 0;
 		}
+		/*
+			resizes the frame buffer, will also resize viewport when calling use() so dont forget to use reset
+		*/
 		void	resize(float width, float height)
 		{
+			this->width = width;
+			this->height = height;
 			glBindTexture(GL_TEXTURE_2D, this->textureID);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
@@ -379,6 +391,8 @@ class	FrameBuffer
 		}
 		void	resizeToWindow()
 		{
+			width = SCREEN_WIDTH;
+			height = SCREEN_HEIGHT;
 			glBindTexture(GL_TEXTURE_2D, this->textureID);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
@@ -386,6 +400,9 @@ class	FrameBuffer
 		}
 		void	use()
 		{
+			SCREEN_WIDTH = width;
+			SCREEN_HEIGHT = height;
+			glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, this->frameBufferID);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
@@ -393,6 +410,11 @@ class	FrameBuffer
 		//Resets back to the main frame (The one drawn on screen)
 		static void	reset()
 		{
+			int	width,height;
+			glfwGetWindowSize(WINDOW->getWindowData(), &width, &height);
+			SCREEN_WIDTH = width;
+			SCREEN_HEIGHT = height;
+			glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glDisable(GL_DEPTH_TEST);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -433,6 +455,8 @@ class	FrameBuffer
 			return (textureID);
 		}
 	private:
+		float	width;
+		float	height;
 		unsigned int frameBufferID;
 		unsigned int textureID;
 		unsigned int RBO;
@@ -443,7 +467,7 @@ void	drawNoPost()
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	Shader	*test = SHADER_MANAGER->get("test");
-	CAMERA->setViewMatrix(*test);
+	ACTIVE_CAMERA->setViewMatrix(*test);
 
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0.0f));
     model = glm::scale(model, glm::vec3(SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3, 1.0f));
@@ -507,23 +531,52 @@ int	main(int ac, char **av)
 
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
 
-		lolTexID = framebuffer.getTexture();
+		FrameBuffer	framebuffer2;
+
+		lolTexID = framebuffer2.getTexture();
+
+		Camera	teste;
+		teste.pos = glm::vec3(345.531, 26.906, 778.647);
+		teste.pitch = -6.62461;
+		teste.yaw = 24.7051;
+
+		ACTIVE_CAMERA = CAMERA;
+
+		framebuffer2.resize(160, 90);
+		framebuffer.resize(640, 360); //Lethal company size lol
+
+		int	frame = 10;
+
+		glfwSwapInterval(0);
 
 		while (WINDOW->up())
 		{
 			WINDOW->loopStart();
 			CAMERA->update();
-			update(SHADER_MANAGER);
+			teste.update();
 
-			update();
-
-			framebuffer.resizeToWindow();
 			framebuffer.use();
 
+			update(SHADER_MANAGER);
+			update();
+			
 			render(mesh, waterMesh);
+
+			if (frame ++ >= currentFPS / 8)
+			{
+				ACTIVE_CAMERA = &teste;
+				framebuffer2.use();
+				update(SHADER_MANAGER);
+	
+				render(mesh, waterMesh);
+	
+				ACTIVE_CAMERA = CAMERA;
+				frame = 0;
+			}
 
 			FrameBuffer::reset();
 
+			updatePostShader(SHADER_MANAGER);
 			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
 
 			drawUI();

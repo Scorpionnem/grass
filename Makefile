@@ -38,7 +38,7 @@ GLAD_PATH = libs/glad
 all: glfw glad glm $(NAME)
 
 run: all
-	@prime-run ./$(NAME) 1000000
+	@./$(NAME) 1000000
 
 vrun: all
 	@valgrind ./$(NAME)

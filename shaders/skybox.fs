@@ -3,6 +3,7 @@
 out vec4 FragColor;
 
 in vec3 TexCoords;
+in vec3 FragPos;
 
 uniform samplerCube skybox;
 
