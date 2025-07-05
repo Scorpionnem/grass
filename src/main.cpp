@@ -469,8 +469,8 @@ void	drawNoPost()
 	Shader	*test = SHADER_MANAGER->get("test");
 	ACTIVE_CAMERA->setViewMatrix(*test);
 
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0.0f));
-    model = glm::scale(model, glm::vec3(SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3, 1.0f));
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(160 + 16, 128 + 16, 0.0f));
+    model = glm::scale(model, glm::vec3(160, 128, 1.0f));
 
     glm::mat4 projection = glm::ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f);
 				
@@ -573,6 +573,7 @@ int	main(int ac, char **av)
 				ACTIVE_CAMERA = CAMERA;
 				frame = 0;
 			}
+			teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
 
 			FrameBuffer::reset();
 
