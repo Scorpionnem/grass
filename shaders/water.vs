@@ -75,18 +75,21 @@ out vec3    Normal;
 
 void main()
 {
-    vec3    pos = aPos;
+    vec3 pos = aPos;
 
     pos.y = water_level;
 
-    vec3    tmpos = pos;
+    vec4 worldPosXZ = model * vec4(pos.x, 0.0, pos.z, 1.0);
+    vec2 worldXZ = worldPosXZ.xz;
 
-    float n = fbm(pos.xz * scale + (time / animSpeed));
+    float n = fbm(worldXZ * scale + (time / animSpeed));
     pos.y += n * amplitude;
 
-    FragPos = pos;
+    vec4 worldPos = model * vec4(pos, 1.0);
+    FragPos = worldPos.xyz;
 
-    Normal = mat3(transpose(inverse(model))) * calculateNormal(tmpos.xz);
+    vec3 normal = calculateNormal(worldXZ);
+    Normal = mat3(transpose(inverse(model))) * normal;
 
-    gl_Position = projection * view * model * vec4(pos, 1.0);
+    gl_Position = projection * view * worldPos;
 }

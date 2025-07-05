@@ -69,13 +69,19 @@ vec3 calculateNormal(vec2 pos) {
 
 void main()
 {
-    vec3    pos = aPos;
+    vec3 pos = aPos;
 
-    float n = fbm(pos.xz * scale);
+    vec4 worldPosXZ = model * vec4(pos.x, 0.0, pos.z, 1.0);
+    vec2 worldXZ = worldPosXZ.xz;
+
+    float n = fbm(worldXZ * scale);
     pos.y += n * amplitude;
 
-    FragPos = pos;
-    Normal = mat3(transpose(inverse(model))) * calculateNormal(pos.xz);
+    vec4 worldPos = model * vec4(pos, 1.0);
+    FragPos = worldPos.xyz;
 
-    gl_Position = projection * view * model * vec4(pos, 1.0);
+    vec3 normal = calculateNormal(worldXZ);
+    Normal = mat3(transpose(inverse(model))) * normal;
+
+    gl_Position = projection * view * worldPos;
 }

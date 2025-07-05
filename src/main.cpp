@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/05 11:13:36 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/05 13:55:33 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,8 @@
 unsigned int	lolTexID;
 
 float	FOV = 65;
-float	SCREEN_WIDTH = 800;
-float	SCREEN_HEIGHT = 800;
+float	SCREEN_WIDTH = 860;
+float	SCREEN_HEIGHT = 520;
 float	RENDER_DISTANCE = 1000;
 
 bool	F3 = false;
@@ -77,6 +77,7 @@ void	build(ShaderManager *shader)
 	shader->load({"post", "shaders/post.vs", "shaders/post.fs"});
 	
 	shader->load({"test", "shaders/test.vs", "shaders/test.fs"});
+	shader->load({"cube", "shaders/cube.vs", "shaders/cube.fs"});
 
 	shader->get("text")->use();
 	shader->get("text")->setInt("tex0", 0);
@@ -103,12 +104,16 @@ void	drawUI()
 {
 	glDisable(GL_DEPTH_TEST);
 
+	static int frame = 0;
 	static std::string	fps = "0 fps";
 	std::string			particles_count;
 	std::string			load_particles;
 
-	if ((int)WINDOW->_lastFrame != (int)WINDOW->_currentFrame)
+	if (frame++ >= currentFPS / 10)
+	{
+		frame = 0;
 		fps = getFPSString();
+	}
 	FONT->putString(fps, *SHADER_MANAGER->get("text"),
 		glm::vec2((SCREEN_WIDTH / 2) - (fps.length() * 15) / 2, 0),
 		glm::vec2(fps.length() * 15, 15));
@@ -216,9 +221,14 @@ class	Mesh
 		Mesh()
 		{
 			model = glm::mat4(1.0);
+			pos = glm::vec3(0);
 			glGenVertexArrays(1, &VAO);
 			glGenBuffers(1, &VBO);
 			glGenBuffers(1, &EBO);
+		}
+		Mesh(glm::vec3 pos): Mesh()
+		{
+			this->pos = pos;
 		}
 		~Mesh()
 		{
@@ -253,7 +263,13 @@ class	Mesh
 		void	draw(Shader	*shader)
 		{
 			shader->use();
+
+			model = glm::mat4(1);
+
+			model = glm::translate(model, pos);
+
 			shader->setMat4("model", model);
+
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
@@ -286,24 +302,73 @@ class	Mesh
 				}
 			}
 		}
+		void generateCube()
+		{
+			vertices.clear();
+			indices.clear();
+		
+			// Cube vertices (same as before)
+			vertices = {
+				{-0.5f, -0.5f, -0.5f}, // 0
+				{ 0.5f, -0.5f, -0.5f}, // 1
+				{ 0.5f,  0.5f, -0.5f}, // 2
+				{-0.5f,  0.5f, -0.5f}, // 3
+				{-0.5f, -0.5f,  0.5f}, // 4
+				{ 0.5f, -0.5f,  0.5f}, // 5
+				{ 0.5f,  0.5f,  0.5f}, // 6
+				{-0.5f,  0.5f,  0.5f}  // 7
+			};
+		
+			// Fixed clockwise winding for each face (when viewed from outside)
+			indices = {
+				// Back face
+				0, 1, 2,
+				2, 3, 0,
+				// Front face
+				6, 5, 4,
+				4, 7, 6,
+				// Left face
+				7, 4, 0,
+				0, 3, 7,
+				// Right face
+				1, 5, 6,
+				6, 2, 1,
+				// Bottom face
+				0, 4, 5,
+				5, 1, 0,
+				// Top face
+				3, 2, 6,
+				6, 7, 3
+			};
+		}
+		glm::vec3	getPos(){return (this->pos);}
+		void	setPos(glm::vec3 pos){this->pos = pos;}
 	private:
 		std::vector<glm::vec3>	vertices;
 		std::vector<unsigned int>	indices;
+		glm::vec3		pos;
 		unsigned int	VAO;
 		unsigned int	VBO;
 		unsigned int	EBO;
 		glm::mat4		model;
 };
 
-void	render(Mesh &mesh, Mesh &waterMesh)
+std::vector<Mesh *>	terrainMeshes;
+std::vector<Mesh *>	waterMeshes;
+		
+void	render()
 {
 	SKYBOX->draw(*ACTIVE_CAMERA, *SHADER_MANAGER->get("skybox"));
 
 	TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
-	mesh.draw(SHADER_MANAGER->get("mesh"));
-	waterMesh.draw(SHADER_MANAGER->get("water"));
+	for (Mesh *terrainMesh : terrainMeshes)
+		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < 320)
+    		terrainMesh->draw(SHADER_MANAGER->get("mesh"));
+	for (Mesh *terrainMesh : waterMeshes)
+		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < 320)
+			terrainMesh->draw(SHADER_MANAGER->get("water"));
 }
 
 void	update()
@@ -318,151 +383,7 @@ void	handleSIGINT(int)
 	glfwSetWindowShouldClose(WINDOW->getWindowData(), true);
 }
 
-float quadVertices[] = {
-    // positions     // texCoords
-    1.0f, -1.0f,      1.0f, 0.0f,
-   -1.0f, -1.0f,      0.0f, 0.0f,
-   -1.0f,  1.0f,      0.0f, 1.0f,
-
-    1.0f,  1.0f,      1.0f, 1.0f,
-    1.0f, -1.0f,      1.0f, 0.0f,
-   -1.0f,  1.0f,      0.0f, 1.0f
-};
-
-unsigned int quadVAO = 0;
-unsigned int quadVBO = 0;
-
-class	FrameBuffer
-{
-	public:
-		FrameBuffer()
-		{
-			glGenFramebuffers(1, &frameBufferID);
-			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
-
-			glGenTextures(1, &textureID);
-			glBindTexture(GL_TEXTURE_2D, textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
-
-			glGenRenderbuffers(1, &RBO);
-			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
-			
-			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-			FrameBuffer::loadQuadModel();
-			this->resizeToWindow();
-		}
-		~FrameBuffer()
-		{
-			glDeleteFramebuffers(1, &frameBufferID);
-			glDeleteTextures(1, &textureID);
-			glDeleteRenderbuffers(1, &RBO);
-			if (quadVAO != 0)
-				glDeleteVertexArrays(1, &quadVAO);
-			if (quadVBO != 0)
-				glDeleteBuffers(1, &quadVBO);
-
-			quadVAO = 0;
-			quadVBO = 0;
-		}
-		/*
-			resizes the frame buffer, will also resize viewport when calling use() so dont forget to use reset
-		*/
-		void	resize(float width, float height)
-		{
-			this->width = width;
-			this->height = height;
-			glBindTexture(GL_TEXTURE_2D, this->textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-		}
-		void	resizeToWindow()
-		{
-			int	width,height;
-			glfwGetWindowSize(WINDOW->getWindowData(), &width, &height);
-			this->width = width;
-			this->height = height;
-			glBindTexture(GL_TEXTURE_2D, this->textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-		}
-		void	use()
-		{
-			SCREEN_WIDTH = width;
-			SCREEN_HEIGHT = height;
-			glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-			glBindFramebuffer(GL_FRAMEBUFFER, this->frameBufferID);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			glEnable(GL_DEPTH_TEST);
-		}
-		//Resets back to the main frame (The one drawn on screen)
-		static void	reset()
-		{
-			int	width,height;
-			glfwGetWindowSize(WINDOW->getWindowData(), &width, &height);
-			SCREEN_WIDTH = width;
-			SCREEN_HEIGHT = height;
-			glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDisable(GL_DEPTH_TEST);
-			glClear(GL_COLOR_BUFFER_BIT);
-		}
-		static void	loadQuadModel()
-		{
-			if (quadVAO != 0 || quadVBO != 0)
-				return ;
-				
-			glGenVertexArrays(1, &quadVAO);
-			glGenBuffers(1, &quadVBO);
-			
-			glBindVertexArray(quadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-			
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-			
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-			
-			glBindVertexArray(0);
-		}
-		//Will draw the texture using the shader on the currently bound frame.
-		static void	drawFrame(Shader *shader, unsigned int texture)
-		{
-			loadQuadModel();
-
-			shader->use();
-			glBindVertexArray(quadVAO);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-		unsigned int	getTexture()
-		{
-			return (textureID);
-		}
-	private:
-		float	width;
-		float	height;
-		unsigned int frameBufferID;
-		unsigned int textureID;
-		unsigned int RBO;
-};
+#include "FrameBuffer.hpp"
 
 void	drawNoPost()
 {
@@ -495,9 +416,12 @@ int	main(int ac, char **av)
 	(void)ac;(void)av;
 	std::signal(SIGINT, handleSIGINT);
 
+	consoleLog("Starting...", NORMAL);
+	
 	try {
 		Engine	engine;
 
+		consoleLog("Loading skybox", NORMAL);
 		Skybox	skybox({SKYBOX_PATHES});
 		SKYBOX = &skybox;
 
@@ -511,72 +435,88 @@ int	main(int ac, char **av)
 			lastY = y;
 		}
 
-		Mesh	mesh;
-		Mesh	waterMesh;
+		consoleLog("Generating terrain", NORMAL);
+		terrainMeshes.reserve(32 * 32);
+		waterMeshes.reserve(32 * 32);
+		for (int i = 0; i < 32; i++)
+		{
+			for (int j = 0; j < 32; j++)
+			{
+				terrainMeshes.push_back(new Mesh(glm::vec3(i * 32, 0, j * 32)));
+				terrainMeshes.back()->generatePlane(32, 32);
+				terrainMeshes.back()->upload();
+			}
+		}
+		for (int i = 0; i < 32; i++)
+		{
+			for (int j = 0; j < 32; j++)
+			{
+				waterMeshes.push_back(new Mesh(glm::vec3(i * 32, 0, j * 32)));
+				waterMeshes.back()->generatePlane(32, 32);
+				waterMeshes.back()->upload();
+			}
+		}
 
+		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
+		FrameBuffer	framebuffer2;
 
-		unsigned int	mapSize = 1000;
-
-		mesh.generatePlane(mapSize, mapSize);
-		waterMesh.generatePlane(mapSize, mapSize);
-
-		mesh.upload();
-		waterMesh.upload();
-
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CW);
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
-
-		// FrameBuffer	framebuffer2;
-
-		// lolTexID = framebuffer2.getTexture();
-
-		Camera	teste;
-		teste.pos = glm::vec3(345.531, 26.906, 778.647);
-		teste.pitch = -6.62461;
-		teste.yaw = 24.7051;
+		lolTexID = framebuffer2.getTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
-		// framebuffer2.resize(160, 90);
-		framebuffer.resize(640, 360); //Lethal company size lol
+		framebuffer2.resize(160, 90);
+		framebuffer.resize(860, 520); //Lethal company size lol
 		
+		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
+
+		Camera	teste;
+		teste.pos = glm::vec3(345.531, 26.906, 778.647);
+		CAMERA->pos = glm::vec3(345.531, 26.906, 778.647);
+		teste.pitch = -6.62461;
+		teste.yaw = 24.7051;
+
 		int	frame = 10;
 
-		glfwSwapInterval(0);
+		Mesh	player;
+		player.generateCube();
+		player.upload();
 
+		consoleLog("Finished, starting rendering...", SUCCESS);
 		while (WINDOW->up())
 		{
 			WINDOW->loopStart();
 			CAMERA->update();
 			teste.update();
 
-			framebuffer.resizeToWindow();
 			framebuffer.use();
 
 			update(SHADER_MANAGER);
 			update();
 			
-			render(mesh, waterMesh);
+			render();
 
-			// if (frame ++ >= currentFPS / 8)
-			// {
-			// 	ACTIVE_CAMERA = &teste;
-			// 	framebuffer2.use();
-			// 	update(SHADER_MANAGER);
+			player.setPos(teste.pos);
+			ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
+			SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(1.0, 0.0, 0.0));
+			player.draw(SHADER_MANAGER->get("cube"));
+
+			if (frame ++ >= currentFPS / 16)
+			{
+				ACTIVE_CAMERA = &teste;
+				framebuffer2.use();
+				update(SHADER_MANAGER);
 	
-			// 	render(mesh, waterMesh);
+				render();
+				player.setPos(CAMERA->pos);
+				ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
+				SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(0.0, 1.0, 0.0));
+				player.draw(SHADER_MANAGER->get("cube"));
 	
-			// 	ACTIVE_CAMERA = CAMERA;
-			// 	frame = 0;
-			// }
-			// teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
+				ACTIVE_CAMERA = CAMERA;
+				frame = 0;
+			}
+			teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
 
 			FrameBuffer::reset();
 
@@ -585,13 +525,13 @@ int	main(int ac, char **av)
 
 			drawUI();
 
-			// drawNoPost();
+			drawNoPost();
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();
 		}
 	} catch (const std::exception &e) {
-		std::cerr << "An error occurred: " << e.what() << std::endl;
+		consoleLog("Program crashed: " + std::string(e.what()), LogSeverity::MELTDOWN);
 		return (1);
 	}
 }

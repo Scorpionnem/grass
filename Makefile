@@ -22,7 +22,8 @@ CPP_FILES :=	main \
 				Shader \
 				Texture \
 				Font \
-				Skybox
+				Skybox \
+				FrameBuffer
 
 CPP_FILES := $(addsuffix .cpp, $(CPP_FILES))
 

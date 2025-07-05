@@ -4,7 +4,7 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 
-float   fogDistance = 900;
+float   fogDistance = 256;
 
 uniform vec3 viewPos;
 

@@ -101,7 +101,7 @@ void main()
     float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
     vignette = mix(1.0, vignette, VignetteIntensity);
 
-    // color = ditheredQuantize(TexCoords, color, 16);//Uncomment to have some beautiful dithering
+    color = ditheredQuantize(TexCoords, color, 16);//Uncomment to have some beautiful dithering
 
 	color = clamp(color, 0.0, 1.0);
 	FragColor = vec4(color * vignette, 1.0);
