@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/04 12:15:14 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/05 11:13:36 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,7 +57,7 @@ void	key_hook(GLFWwindow *window, int key, int scancode, int action, int mods)
 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
 	{
 		F3 = !F3;
 		if (!F3)
@@ -391,8 +391,10 @@ class	FrameBuffer
 		}
 		void	resizeToWindow()
 		{
-			width = SCREEN_WIDTH;
-			height = SCREEN_HEIGHT;
+			int	width,height;
+			glfwGetWindowSize(WINDOW->getWindowData(), &width, &height);
+			this->width = width;
+			this->height = height;
 			glBindTexture(GL_TEXTURE_2D, this->textureID);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
@@ -531,9 +533,9 @@ int	main(int ac, char **av)
 
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
 
-		FrameBuffer	framebuffer2;
+		// FrameBuffer	framebuffer2;
 
-		lolTexID = framebuffer2.getTexture();
+		// lolTexID = framebuffer2.getTexture();
 
 		Camera	teste;
 		teste.pos = glm::vec3(345.531, 26.906, 778.647);
@@ -542,9 +544,9 @@ int	main(int ac, char **av)
 
 		ACTIVE_CAMERA = CAMERA;
 
-		framebuffer2.resize(160, 90);
+		// framebuffer2.resize(160, 90);
 		framebuffer.resize(640, 360); //Lethal company size lol
-
+		
 		int	frame = 10;
 
 		glfwSwapInterval(0);
@@ -555,6 +557,7 @@ int	main(int ac, char **av)
 			CAMERA->update();
 			teste.update();
 
+			framebuffer.resizeToWindow();
 			framebuffer.use();
 
 			update(SHADER_MANAGER);
@@ -562,18 +565,18 @@ int	main(int ac, char **av)
 			
 			render(mesh, waterMesh);
 
-			if (frame ++ >= currentFPS / 8)
-			{
-				ACTIVE_CAMERA = &teste;
-				framebuffer2.use();
-				update(SHADER_MANAGER);
+			// if (frame ++ >= currentFPS / 8)
+			// {
+			// 	ACTIVE_CAMERA = &teste;
+			// 	framebuffer2.use();
+			// 	update(SHADER_MANAGER);
 	
-				render(mesh, waterMesh);
+			// 	render(mesh, waterMesh);
 	
-				ACTIVE_CAMERA = CAMERA;
-				frame = 0;
-			}
-			teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
+			// 	ACTIVE_CAMERA = CAMERA;
+			// 	frame = 0;
+			// }
+			// teste.yaw = 24.7051 + cos(glfwGetTime()) * 10;
 
 			FrameBuffer::reset();
 
@@ -582,7 +585,7 @@ int	main(int ac, char **av)
 
 			drawUI();
 
-			drawNoPost();
+			// drawNoPost();
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();
