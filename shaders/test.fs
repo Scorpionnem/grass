@@ -3,6 +3,7 @@
 out vec4 FragColor;
 
 in vec2    TexPos;
+in vec2    FragPos;
 
 uniform sampler2D   screenTexture;
 
@@ -31,5 +32,19 @@ void main()
 
     color = ditheredQuantize(TexPos, color, 8);
 
-    FragColor = vec4(color, 1.0);
+    vec3 black = vec3(0.0);
+
+    if (abs(FragPos.x) > 0.97 || abs(FragPos.y) > 0.97) //Draws the outline on the last 3% of the texture
+        color = black;
+
+    vec2 centeredUV = vec2(TexPos.x - 0.5, TexPos.y + 0.5);
+    float dist = length(centeredUV);
+
+    float VignetteIntensity = 1;
+    float VignetteRadius = 0.70;
+
+    float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
+    vignette = mix(1.0, vignette, VignetteIntensity);
+
+    FragColor = vec4(color * vignette, 1.0);
 }
