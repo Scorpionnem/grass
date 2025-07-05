@@ -55,6 +55,9 @@ float height(vec2 pos)
 
 float   water_level = 15.0;
 
+float VignetteIntensity = 0.5;
+float VignetteRadius = 0.75;
+
 void main()
 {
 	vec2	uv = TexCoords;
@@ -73,6 +76,12 @@ void main()
 		color -= vec3(0.1);
 	}
 
+    vec2 centeredUV = uv - vec2(0.5);
+    float dist = length(centeredUV);
+
+    float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
+    vignette = mix(1.0, vignette, VignetteIntensity);
+
 	color = clamp(color, 0.0, 1.0);
-	FragColor = vec4(color, 1.0);
+	FragColor = vec4(color * vignette, 1.0);
 }
