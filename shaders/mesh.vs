@@ -67,6 +67,8 @@ vec3 calculateNormal(vec2 pos) {
     return normalize(vec3(-dx, 2.0 * delta, -dz));
 }
 
+out vec4    worldPos;
+
 void main()
 {
     vec3 pos = aPos;
@@ -77,7 +79,7 @@ void main()
     float n = fbm(worldXZ * scale);
     pos.y += n * amplitude;
 
-    vec4 worldPos = model * vec4(pos, 1.0);
+    worldPos = model * vec4(pos, 1.0);
     FragPos = worldPos.xyz;
 
     vec3 normal = calculateNormal(worldXZ);

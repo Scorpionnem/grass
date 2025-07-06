@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 13:48:51 by mbatty            #+#    #+#             */
-/*   Updated: 2025/05/28 16:41:52 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/06 15:06:56 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ class	Texture
 		void	use(void);
 		void	use1(void);
 		void	use2(void);
+		void	use3(void);
 		static void	reset(void);
 		unsigned int	ID;
 		std::vector<unsigned char>	data;

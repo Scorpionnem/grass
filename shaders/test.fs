@@ -30,7 +30,7 @@ void main()
 {
 	vec3 color = texture(screenTexture, TexPos).rgb;
 
-    color = ditheredQuantize(TexPos, color, 8);
+    // color = ditheredQuantize(TexPos, color, 8);
 
     vec3 black = vec3(0.0);
 
@@ -46,5 +46,6 @@ void main()
     float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
     vignette = mix(1.0, vignette, VignetteIntensity);
 
-    FragColor = vec4(color * vignette, 1.0);
+    FragColor = vec4(color, 1.0);
+    // FragColor = vec4(color * vignette, 1.0);
 }

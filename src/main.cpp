@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/05 17:42:10 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/06 16:00:10 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,9 +89,13 @@ void	build(ShaderManager *shader)
 	shader->get("mesh")->setInt("snow_texture", 2);
 	shader->get("post")->use();
 	shader->get("post")->setInt("screenTexture", 0);
+	shader->get("post")->setInt("depthTex", 1);
 	
 	shader->get("test")->use();
 	shader->get("test")->setInt("screenTexture", 0);
+	
+	shader->get("water")->use();
+	shader->get("water")->setInt("depthTex", 0);
 }
 
 std::string	getFPSString()
@@ -364,6 +368,8 @@ class	Mesh
 std::vector<Mesh *>	terrainMeshes;
 std::vector<Mesh *>	waterMeshes;
 
+unsigned int	depthTex;
+
 void	render()
 {
 	SKYBOX->draw(*ACTIVE_CAMERA, *SHADER_MANAGER->get("skybox"));
@@ -371,12 +377,16 @@ void	render()
 	TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
 	TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
 	TEXTURE_MANAGER->get("textures/snow.bmp")->use2();
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	for (Mesh *terrainMesh : terrainMeshes)
 		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < RENDER_DISTANCE - 64)
     		terrainMesh->draw(SHADER_MANAGER->get("mesh"));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, depthTex);
 	for (Mesh *terrainMesh : waterMeshes)
 		if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < RENDER_DISTANCE - 64)
 			terrainMesh->draw(SHADER_MANAGER->get("water"));
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void	update()
@@ -409,7 +419,7 @@ void	drawNoPost()
 	test->setMat4("model", model);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, lolTexID);
+	glBindTexture(GL_TEXTURE_2D, depthTex);
 
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -467,15 +477,18 @@ int	main(int ac, char **av)
 
 		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
+		FrameBuffer	waterDepthBuffer;
 		FrameBuffer	framebuffer2;
 
 		lolTexID = framebuffer2.getTexture();
+		depthTex = waterDepthBuffer.getTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
-		framebuffer2.resize(215, 130);
+		framebuffer2.resize(1920, 1080);
+		waterDepthBuffer.resize(860, 520);
 		framebuffer.resize(860, 520); //Lethal company size lol
-		
+
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
 
 		Camera	teste;
@@ -497,47 +510,57 @@ int	main(int ac, char **av)
 			CAMERA->update();
 			teste.update();
 
-			framebuffer.use();
-
 			update(SHADER_MANAGER);
 			update();
 			
+			SHADER_MANAGER->get("mesh")->use();
+			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
+			waterDepthBuffer.use();
+			for (Mesh *terrainMesh : terrainMeshes)
+				if (glm::length(ACTIVE_CAMERA->pos - (terrainMesh->getPos() + glm::vec3(16, 0, 16))) < RENDER_DISTANCE - 64)
+    				terrainMesh->draw(SHADER_MANAGER->get("mesh"));
+			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
+
+			framebuffer.use();
 			render();
 
-			player.setPos(teste.pos);
-			ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
-			SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(1.0, 0.0, 0.0));
-			player.draw(SHADER_MANAGER->get("cube"));
+			// player.setPos(teste.pos);
+			// ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
+			// SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(1.0, 0.0, 0.0));
+			// player.draw(SHADER_MANAGER->get("cube"));
 
-			player.setScale(glm::vec3(1, 1, 1));
+			// player.setScale(glm::vec3(1, 1, 1));
 
-			if (frame++ >= currentFPS / 16)
-			{
-				RENDER_DISTANCE = 256;
-				ACTIVE_CAMERA = &teste;
-				framebuffer2.use();
-				update(SHADER_MANAGER);
+			// if (frame++ >= currentFPS / 16)
+			// {
+			// 	RENDER_DISTANCE = 256;
+			// 	ACTIVE_CAMERA = &teste;
+			// 	update(SHADER_MANAGER);
 	
-				render();
-				player.setPos(CAMERA->pos);
-				ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
-				SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(0.0, 1.0, 0.0));
-				player.draw(SHADER_MANAGER->get("cube"));
+			// 	framebuffer2.use();
 	
-				ACTIVE_CAMERA = CAMERA;
-				frame = 0;
-			}
-			RENDER_DISTANCE = 448;
-			teste.yaw = 24 + cos(glfwGetTime()) * 10;
+			// 	render();
+			// 	player.setPos(CAMERA->pos);
+			// 	ACTIVE_CAMERA->setViewMatrix(*SHADER_MANAGER->get("cube"));
+			// 	SHADER_MANAGER->get("cube")->setVec3("color", glm::vec3(0.0, 1.0, 0.0));
+			// 	player.draw(SHADER_MANAGER->get("cube"));
+	
+			// 	ACTIVE_CAMERA = CAMERA;
+			// 	frame = 0;
+			// }
+			// RENDER_DISTANCE = 448;
+			// teste.yaw = 24 + cos(glfwGetTime()) * 10;
 
 			FrameBuffer::reset();
 
 			updatePostShader(SHADER_MANAGER);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, depthTex);
 			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
 
 			drawUI();
 
-			drawNoPost();
+			// drawNoPost();
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();

@@ -73,6 +73,10 @@ vec3 calculateNormal(vec2 pos)
 
 out vec3    Normal;
 
+out vec4 worldPos;
+
+out vec4 clipSpacePos;
+
 void main()
 {
     vec3 pos = aPos;
@@ -85,11 +89,12 @@ void main()
     float n = fbm(worldXZ * scale + (time / animSpeed));
     pos.y += n * amplitude;
 
-    vec4 worldPos = model * vec4(pos, 1.0);
+    worldPos = model * vec4(pos, 1.0);
     FragPos = worldPos.xyz;
 
     vec3 normal = calculateNormal(worldXZ);
     Normal = mat3(transpose(inverse(model))) * normal;
 
     gl_Position = projection * view * worldPos;
+    clipSpacePos = gl_Position;
 }

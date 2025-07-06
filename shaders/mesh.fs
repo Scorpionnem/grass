@@ -8,19 +8,38 @@ in vec3	FragPos;
 uniform vec3    viewPos;
 
 uniform float RENDER_DISTANCE;
-float   fogDistance = RENDER_DISTANCE - 128;
+float   fogDistance = RENDER_DISTANCE - (RENDER_DISTANCE / 3.5);
 
 uniform sampler2D   grass_texture;
 uniform sampler2D   stone_texture;
 uniform sampler2D   snow_texture;
 
+uniform bool    getDepth;
+uniform float   time;
+
+in vec4    worldPos;
+
 void main()
 {
+    // bool    isUnderwater = false;
+    // bool    isCameraUnderwater = false;
+    // if (worldPos.y < water_level + (fbm(worldPos.xz * scale + (time / animSpeed)) * amplitude))
+    //     isUnderwater = true;
+
+    // if (viewPos.y < water_level + (fbm(viewPos.xz * scale + (time / animSpeed)) * amplitude))
+    //     isCameraUnderwater = true;
+
 	vec3 color = Normal;
     float   dist = length(FragPos - viewPos);
 
     if (dist > fogDistance + 10)
         discard ;
+
+    // if (isCameraUnderwater && !isUnderwater)
+    //     dist = clamp(dist / (fogDistance / 2), 0.0, 1.0);
+    // else
+    float   distFarPlane = clamp(dist / RENDER_DISTANCE, 0.0, 1.0);
+    dist = clamp(dist / fogDistance, 0.0, 1.0);
 
     float steepness = 1.0f - dot(Normal, vec3(0, 1, 0));
 
@@ -38,9 +57,6 @@ void main()
         color = texture(stone_texture, FragPos.xz).rgb;
         actualShiness = 0.1;
     }
-
-    dist = clamp(dist / fogDistance, 0.0, 1.0);
-
 
 
 
@@ -65,7 +81,10 @@ void main()
 
 
 
-
+    FragColor = vec4(vec3(0), 1);
     result = mix(result, vec3(0.6, 0.8, 1.0), dist);
-    FragColor = vec4(result, 1.0);
+    if (getDepth)
+        FragColor.rgb = vec3(distFarPlane);
+    else
+        FragColor = vec4(result, 1.0);
 }

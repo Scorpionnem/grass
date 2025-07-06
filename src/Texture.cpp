@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 13:49:15 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/02 10:50:00 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/06 15:06:51 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,6 +139,12 @@ void	Texture::use1(void)
 void	Texture::use2(void)
 {
 	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, this->ID);
+}
+
+void	Texture::use3(void)
+{
+	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, this->ID);
 }
 
