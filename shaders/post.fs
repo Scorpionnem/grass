@@ -56,7 +56,7 @@ float height(vec2 pos)
 
 float   water_level = 15.0;
 
-float VignetteIntensity = 0.5;
+float VignetteIntensity = 0.25;
 float VignetteRadius = 0.75;
 
 vec3 ditheredQuantize(vec2 TexPos, vec3 color, int levels) {
@@ -85,30 +85,27 @@ void main()
 	float n = fbm(viewPos.xz * scale + (time / 50));
     waterLevel += n * amplitude;
 
-	if (viewPos.y < waterLevel)
+	if (viewPos.y <= waterLevel)
 		isUnderwater = true;
 
-	vec3 color = texture(screenTexture, uv).rgb;
-	float waterDepth = texture(depthTex, uv).r;
-
-	// if (isUnderwater)
-	// {
-	// 	float	mixFactor = clamp(waterDepth, 0.3, 0.8);
-	// 	if (waterDepth == 0)
-	// 	{
-	// 		waterDepth += (waterLevel - viewPos.y) / 20;
-	// 		waterDepth = clamp(waterDepth, 0, 1);
-	// 		mixFactor = clamp(waterDepth, 0.25, 0.8);
-	// 	}
-	// 	vec3 waterColor = mix(vec3(0.5, 0.8, 0.87), vec3(0.0, 0.3, 1.0), waterDepth);
-	// 	color = mix(color, waterColor, mixFactor);
-	// }
-
     vec2 centeredUV = uv - vec2(0.5);
+
     float dist = length(centeredUV);
 
 	float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
 	vignette = mix(1.0, vignette, VignetteIntensity);
+
+	vec3 color = texture(screenTexture, uv).rgb;
+	float waterDepth = texture(depthTex, uv).r;
+
+	if (isUnderwater)
+	{
+		vec3 closeColor = vec3(0.3, 0.8, 0.87);
+		vec3 farColor = vec3(0.0, 0.2, 1.0);
+    	vec3 waterColor = mix(closeColor, farColor, 1 - exp(-waterDepth * 10));
+		FragColor = vec4(vec3(mix(color, waterColor, 0.7) * vignette), 1.0);
+		return ;
+	}
 
 	// color = ditheredQuantize(TexCoords, color, 32); //Uncomment to have some beautiful dithering
 

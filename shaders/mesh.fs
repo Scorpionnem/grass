@@ -21,23 +21,12 @@ in vec4    worldPos;
 
 void main()
 {
-    // bool    isUnderwater = false;
-    // bool    isCameraUnderwater = false;
-    // if (worldPos.y < water_level + (fbm(worldPos.xz * scale + (time / animSpeed)) * amplitude))
-    //     isUnderwater = true;
-
-    // if (viewPos.y < water_level + (fbm(viewPos.xz * scale + (time / animSpeed)) * amplitude))
-    //     isCameraUnderwater = true;
-
 	vec3 color = Normal;
     float   dist = length(FragPos - viewPos);
 
     if (dist > fogDistance + 10)
         discard ;
 
-    // if (isCameraUnderwater && !isUnderwater)
-    //     dist = clamp(dist / (fogDistance / 2), 0.0, 1.0);
-    // else
     float   distFarPlane = clamp(dist / RENDER_DISTANCE, 0.0, 1.0);
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 

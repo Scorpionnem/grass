@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 13:04:23 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/07 15:21:53 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -378,9 +378,11 @@ class	Chunk
 	public:
 		Chunk(glm::vec3 pos): terrain(pos), water(pos)
 		{
-			terrain.generatePlane(32.f, 32.f);
+			terrain.generatePlane(16.f, 16.f);
+			terrain.setScale(glm::vec3(2, 1, 2));
 			terrain.upload();
-			water.generatePlane(32.f, 32.f);
+			water.generatePlane(16.f, 16.f);
+			water.setScale(glm::vec3(2, 1, 2));
 			water.upload();
 			this->pos = pos;
 		}
@@ -436,21 +438,21 @@ class	Region
 		}
 		void	drawTerrain(Shader *shader)
 		{
-			for (auto *chunk : chunks)
+			for (auto *chunk : visibleChunks)
 				if (chunk->isInRange())
 					chunk->drawTerrain(shader);
 		}
 		void	drawWater(Shader *shader)
 		{
 			sortChunks();
-			for (auto *chunk : chunks)
+			for (auto *chunk : visibleChunks)
 				if (chunk->isInRange())
 					chunk->drawWater(shader);
 		}
 		void	drawBoth(Shader *terrainShader, Shader *waterShader)
 		{
 			sortChunks();
-			for (auto *chunk : chunks)
+			for (auto *chunk : visibleChunks)
 				if (chunk->isInRange())
 				{
 					chunk->drawTerrain(terrainShader);
@@ -471,16 +473,27 @@ class	Region
 			
 			return (distance);
 		}
+		void	computeVisibility()
+		{
+			visibleChunks.clear();
+			visibleChunks.reserve(chunks.size());
+			for (auto *chunk : chunks)
+				if (chunk->isInRange())
+					visibleChunks.emplace_back(chunk);
+			visibleChunks.shrink_to_fit();
+			sortChunks();
+		}
 	private:
 		void	sortChunks()
 		{
-			std::sort(chunks.begin(), chunks.end(),
+			std::sort(visibleChunks.begin(), visibleChunks.end(),
 			[](const Chunk *cp1, const Chunk *cp2)
 			{
 				return (cp1->getDistance() > cp2->getDistance());
 			});
 		}
 		std::vector<Chunk *>	chunks;
+		std::vector<Chunk *>	visibleChunks;
 		glm::vec3				pos;
 };
 
@@ -489,9 +502,9 @@ class	World
 	public:
 		World()
 		{
-			for (int x = 0; x < 16; x++)
+			for (int x = 0; x < 32; x++)
 			{
-				for (int y = 0; y < 16; y++)
+				for (int y = 0; y < 32; y++)
 				{
 					regions.push_back(new Region(glm::vec3(x, 0, y)));
 					regions.back()->generate();
@@ -510,7 +523,10 @@ class	World
 			visibleRegions.reserve(regions.size());
 			for (auto *region : regions)
 				if (region->isInRange(CAMERA->pos))
+				{
+					region->computeVisibility();
 					visibleRegions.emplace_back(region);
+				}
 			visibleRegions.shrink_to_fit();
 			sortChunks();
 		}
@@ -518,6 +534,11 @@ class	World
 		{
 			for (auto *region : visibleRegions)
 				region->drawTerrain(SHADER_MANAGER->get("mesh"));
+		}
+		void	drawWater()
+		{
+			for (auto *region : visibleRegions)
+				region->drawWater(SHADER_MANAGER->get("water"));
 		}
 		void	drawBoth()
 		{
@@ -569,14 +590,14 @@ int	main(int ac, char **av)
 		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
 		FrameBuffer	terrainDepthBuffer;
-		FrameBuffer	fulldepth;
+		FrameBuffer	waterDepthBuffer;
 
 		depthTex = terrainDepthBuffer.getTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
 		terrainDepthBuffer.resize(860, 520);
-		fulldepth.resize(860, 520);
+		waterDepthBuffer.resize(860, 520);
 		framebuffer.resize(860, 520); //Lethal company size lol
 
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
@@ -603,34 +624,36 @@ int	main(int ac, char **av)
 			SHADER_MANAGER->get("mesh")->use();
 			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
 
-			framebuffer.use();
-			render();
-
-			world.drawBoth();
-
 			SHADER_MANAGER->get("mesh")->use();
 			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
 			SHADER_MANAGER->get("water")->use();
 			SHADER_MANAGER->get("water")->setBool("getDepth", true);
-			fulldepth.use();
-			world.drawBoth();
+			waterDepthBuffer.use();
+			glDisable(GL_CULL_FACE);
+			world.drawWater();
+			glEnable(GL_CULL_FACE);
+			world.drawTerrain();
 			SHADER_MANAGER->get("mesh")->use();
 			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
 			SHADER_MANAGER->get("water")->use();
 			SHADER_MANAGER->get("water")->setBool("getDepth", false);
 
+			framebuffer.use();
+			render();
+
+			world.drawBoth();
 
 			FrameBuffer::reset();
 
 			updatePostShader(SHADER_MANAGER);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, depthTex);
+			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getTexture());
 			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
 
 			drawUI();
 
 			drawNoPost(glm::vec3(1, 1, 1), terrainDepthBuffer);
-			drawNoPost(glm::vec3(3, 1, 3), fulldepth);
+			drawNoPost(glm::vec3(3, 1, 3), waterDepthBuffer);
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();
