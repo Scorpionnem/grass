@@ -15,6 +15,7 @@ void main()
     vec3 pos = aPos;
 	FragPos = aPos;
 
+    pos.x += gl_InstanceID;
     vec4 worldPos = model * vec4(pos, 1.0);
     WorldFragPos = worldPos.xyz;
 
