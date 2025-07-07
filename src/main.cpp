@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 15:21:53 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/07 19:35:36 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -339,7 +339,6 @@ void	update()
 }
 
 #include <csignal>
-#include <fontconfig/fontconfig.h>
 
 void	handleSIGINT(int)
 {
@@ -560,7 +559,6 @@ class	World
 
 int	main(int ac, char **av)
 {
-	FcInit();
 	(void)ac;(void)av;
 	std::signal(SIGINT, handleSIGINT);
 
