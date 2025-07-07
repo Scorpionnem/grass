@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 08:17:58 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/07 13:04:23 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,8 +18,6 @@
 #include "Window.hpp"
 #include "Texture.hpp"
 #include "Skybox.hpp"
-
-unsigned int	lolTexID;
 
 float	FOV = 65;
 float	SCREEN_WIDTH = 860;
@@ -350,14 +348,14 @@ void	handleSIGINT(int)
 
 #include "FrameBuffer.hpp"
 
-void	drawNoPost(FrameBuffer &buffer)
+void	drawNoPost(glm::vec3 offset, FrameBuffer &buffer)
 {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	Shader	*test = SHADER_MANAGER->get("test");
 	ACTIVE_CAMERA->setViewMatrix(*test);
 
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(160 + 16, 128 + 16, 0.0f));
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(160 + 16, 128 + 16, 0.0f) * offset);
     model = glm::scale(model, glm::vec3(160, 128, 1.0f));
 
     glm::mat4 projection = glm::ortho(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f);
@@ -406,6 +404,10 @@ class	Chunk
 		{
 			return (glm::length(ACTIVE_CAMERA->pos - (this->pos + glm::vec3(16.f, 0.f, 16.f))) < RENDER_DISTANCE - 64.f);
 		}
+		float		getDistance() const
+		{
+			return (glm::length(ACTIVE_CAMERA->pos - (this->pos + glm::vec3(16.f, 0.f, 16.f))));
+		}
 	private:
 		Mesh	terrain;
 		Mesh	water;
@@ -440,12 +442,14 @@ class	Region
 		}
 		void	drawWater(Shader *shader)
 		{
+			sortChunks();
 			for (auto *chunk : chunks)
 				if (chunk->isInRange())
 					chunk->drawWater(shader);
 		}
 		void	drawBoth(Shader *terrainShader, Shader *waterShader)
 		{
+			sortChunks();
 			for (auto *chunk : chunks)
 				if (chunk->isInRange())
 				{
@@ -460,9 +464,77 @@ class	Region
 			
 			return (distance < RENDER_DISTANCE + 64.0f);
 		}
+		float	getDistance() const
+		{
+			glm::vec3 center = (this->pos * glm::vec3(4.f) * glm::vec3(32.f)) + glm::vec3(64.0f, 0.0f, 64.0f);
+			float distance = glm::length(ACTIVE_CAMERA->pos - center);
+			
+			return (distance);
+		}
 	private:
+		void	sortChunks()
+		{
+			std::sort(chunks.begin(), chunks.end(),
+			[](const Chunk *cp1, const Chunk *cp2)
+			{
+				return (cp1->getDistance() > cp2->getDistance());
+			});
+		}
 		std::vector<Chunk *>	chunks;
 		glm::vec3				pos;
+};
+
+class	World
+{
+	public:
+		World()
+		{
+			for (int x = 0; x < 16; x++)
+			{
+				for (int y = 0; y < 16; y++)
+				{
+					regions.push_back(new Region(glm::vec3(x, 0, y)));
+					regions.back()->generate();
+				}
+			}
+		}
+		~World()
+		{
+			visibleRegions.clear();
+			for (auto *region : regions)
+				delete region;
+		}
+		void	computeVisibility()
+		{
+			visibleRegions.clear();
+			visibleRegions.reserve(regions.size());
+			for (auto *region : regions)
+				if (region->isInRange(CAMERA->pos))
+					visibleRegions.emplace_back(region);
+			visibleRegions.shrink_to_fit();
+			sortChunks();
+		}
+		void	drawTerrain()
+		{
+			for (auto *region : visibleRegions)
+				region->drawTerrain(SHADER_MANAGER->get("mesh"));
+		}
+		void	drawBoth()
+		{
+			for (auto *region : visibleRegions)
+				region->drawBoth(SHADER_MANAGER->get("mesh"), SHADER_MANAGER->get("water"));
+		}
+	private:
+		void	sortChunks()
+		{
+			std::sort(visibleRegions.begin(), visibleRegions.end(),
+			[](const Region *cp1, const Region *cp2)
+			{
+				return (cp1->getDistance() > cp2->getDistance());
+			});
+		}
+		std::vector<Region *>	regions;
+		std::vector<Region *>	visibleRegions;
 };
 
 int	main(int ac, char **av)
@@ -492,30 +564,19 @@ int	main(int ac, char **av)
 
 		consoleLog("Generating terrain", NORMAL);
 
-		std::vector<Region *>	regions;
-		for (int x = 0; x < 32; x++)
-		{
-			for (int y = 0; y < 32; y++)
-			{
-				regions.push_back(new Region(glm::vec3(x, 0, y)));
-				regions.back()->generate();
-			}
-		}
+		World	world;
 
 		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
 		FrameBuffer	terrainDepthBuffer;
-		FrameBuffer	waterDepthBuffer;
-		FrameBuffer	framebuffer2;
+		FrameBuffer	fulldepth;
 
-		lolTexID = framebuffer2.getTexture();
 		depthTex = terrainDepthBuffer.getTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
-		framebuffer2.resize(1920, 1080);
 		terrainDepthBuffer.resize(860, 520);
-		waterDepthBuffer.resize(860, 520);
+		fulldepth.resize(860, 520);
 		framebuffer.resize(860, 520); //Lethal company size lol
 
 		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
@@ -533,21 +594,31 @@ int	main(int ac, char **av)
 			update(SHADER_MANAGER);
 			update();
 			
+			world.computeVisibility();
+
 			SHADER_MANAGER->get("mesh")->use();
 			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
 			terrainDepthBuffer.use();
-			for (auto *region : regions)
-				if (region->isInRange(CAMERA->pos))
-					region->drawTerrain(SHADER_MANAGER->get("mesh"));
+			world.drawTerrain();
 			SHADER_MANAGER->get("mesh")->use();
 			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
 
 			framebuffer.use();
 			render();
 
-			for (auto *region : regions)
-				if (region->isInRange(CAMERA->pos))
-					region->drawBoth(SHADER_MANAGER->get("mesh"), SHADER_MANAGER->get("water"));
+			world.drawBoth();
+
+			SHADER_MANAGER->get("mesh")->use();
+			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
+			SHADER_MANAGER->get("water")->use();
+			SHADER_MANAGER->get("water")->setBool("getDepth", true);
+			fulldepth.use();
+			world.drawBoth();
+			SHADER_MANAGER->get("mesh")->use();
+			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
+			SHADER_MANAGER->get("water")->use();
+			SHADER_MANAGER->get("water")->setBool("getDepth", false);
+
 
 			FrameBuffer::reset();
 
@@ -558,7 +629,8 @@ int	main(int ac, char **av)
 
 			drawUI();
 
-			drawNoPost(terrainDepthBuffer);
+			drawNoPost(glm::vec3(1, 1, 1), terrainDepthBuffer);
+			drawNoPost(glm::vec3(3, 1, 3), fulldepth);
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();

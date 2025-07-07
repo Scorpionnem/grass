@@ -25,11 +25,12 @@ void main()
     if (dist > fogDistance + 10)
         discard ;
 
+    float farPlaneDist = clamp(dist / RENDER_DISTANCE, 0.0, 1.0);
     dist = clamp(dist / fogDistance, 0.0, 1.0);
 
     if (getDepth == true)
     {
-        FragColor = vec4(vec3(dist), 1.0);
+        FragColor = vec4(vec3(farPlaneDist), 1.0);
         return ;
     }
 

@@ -54,7 +54,7 @@ float height(vec2 pos)
 }
 
 vec3 calculateNormal(vec2 pos) {
-    float delta = 0.001;
+    float delta = 0.01;
 
     float hL = height(pos - vec2(delta, 0.0));
     float hR = height(pos + vec2(delta, 0.0));
