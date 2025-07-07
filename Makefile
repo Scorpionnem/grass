@@ -94,7 +94,7 @@ $(OBJ_DIR):
 	@(cd $(SOURCE_DIR) && find . -type d -exec mkdir -p -- $(shell pwd)/$(OBJ_DIR){} \;)
 
 $(NAME): $(OBJ_DIR) $(OBJECTS)
-	@c++ $(OBJECTS) -lfontconfig $(GLFWARCHIVE) -o $(NAME)
+	@c++ $(OBJECTS) $(GLFWARCHIVE) -o $(NAME)
 	@echo "\033[0;32mCompiled $(NAME)\033[0m"
 
 clean:

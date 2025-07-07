@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 19:35:36 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/07 20:48:03 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -363,7 +363,7 @@ void	drawNoPost(glm::vec3 offset, FrameBuffer &buffer)
 	test->setMat4("model", model);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, buffer.getTexture());
+	glBindTexture(GL_TEXTURE_2D, buffer.getDepthTexture());
 
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -587,10 +587,10 @@ int	main(int ac, char **av)
 
 		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
-		FrameBuffer	terrainDepthBuffer;
-		FrameBuffer	waterDepthBuffer;
+		FrameBuffer	terrainDepthBuffer(true);
+		FrameBuffer	waterDepthBuffer(true);
 
-		depthTex = terrainDepthBuffer.getTexture();
+		depthTex = terrainDepthBuffer.getDepthTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
@@ -645,7 +645,7 @@ int	main(int ac, char **av)
 
 			updatePostShader(SHADER_MANAGER);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getTexture());
+			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getDepthTexture());
 			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
 
 			drawUI();

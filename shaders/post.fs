@@ -78,6 +78,15 @@ vec3 ditheredQuantize(vec2 TexPos, vec3 color, int levels) {
 	return (floor(clamp(dithered, 0.0, 1.0) * float(levels)) / float(levels));
 }
 
+float   near = 0.1;
+float   far = 500;
+
+    float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main()
 {
 	vec2	uv = TexCoords;
@@ -90,6 +99,7 @@ void main()
 
 	vec3 color = texture(screenTexture, uv).rgb;
 	float waterDepth = texture(depthTex, uv).r;
+	waterDepth = (LinearizeDepth(texture(depthTex, uv).r) - near) / (far - near);
 
 	if (isUnderwater)
 	{
@@ -99,7 +109,7 @@ void main()
 		color = vec3(mix(color, waterColor, 0.7));
 	}
 
-	color = ditheredQuantize(TexCoords, color, 32); //Uncomment to have some beautiful dithering
+	// color = ditheredQuantize(TexCoords, color, 32); //Uncomment to have some beautiful dithering
 
     vec2 centeredUV = uv - vec2(0.5);
 

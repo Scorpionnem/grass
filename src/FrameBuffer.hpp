@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/05 11:27:41 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 15:02:09 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/07 20:47:47 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,8 +46,32 @@ class	FrameBuffer
 			glBindRenderbuffer(GL_RENDERBUFFER, RBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-			
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+			
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				throw std::runtime_error("FrameBuffer could not finish");
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			FrameBuffer::loadQuadModel();
+			this->resizeToWindow();
+		}
+		FrameBuffer(bool depth)
+		{
+			(void)depth;
+			glGenFramebuffers(1, &frameBufferID);
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
+
+			glGenTextures(1, &depthTextureID);
+			glBindTexture(GL_TEXTURE_2D, depthTextureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureID, 0);
+
+			RBO = 0;
 			
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 				throw std::runtime_error("FrameBuffer could not finish");
@@ -60,6 +84,7 @@ class	FrameBuffer
 		{
 			glDeleteFramebuffers(1, &frameBufferID);
 			glDeleteTextures(1, &textureID);
+			glDeleteTextures(1, &depthTextureID);
 			glDeleteRenderbuffers(1, &RBO);
 			if (quadVAO != 0)
 				glDeleteVertexArrays(1, &quadVAO);
@@ -129,12 +154,17 @@ class	FrameBuffer
 		{
 			return (textureID);
 		}
+		unsigned int	getDepthTexture()
+		{
+			return (depthTextureID);
+		}
 	private:
 		float	width;
 		float	height;
-		unsigned int frameBufferID;
-		unsigned int textureID;
-		unsigned int RBO;
+		unsigned int frameBufferID = 0;
+		unsigned int textureID = 0;
+		unsigned int depthTextureID = 0;
+		unsigned int RBO = 0;
 };
 
 #endif

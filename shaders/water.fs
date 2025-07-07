@@ -15,6 +15,15 @@ in vec4 clipSpacePos;
 
 uniform bool getDepth;
 
+float   near = 0.1;
+float   far = RENDER_DISTANCE;
+
+    float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main()
 {
     vec3 color = vec3(1);
@@ -47,6 +56,7 @@ void main()
     vec3 ndc = clipSpacePos.xyz / clipSpacePos.w;
     ndc.xy = ndc.xy / 2 + 0.5;
     float distToTerrain = texture(depthTex, ndc.xy).x;
+    distToTerrain = (LinearizeDepth(texture(depthTex, ndc.xy).r) - near) / (far - near);
 
     float waterDist = length(FragPos - viewPos);
     waterDist = clamp(waterDist / RENDER_DISTANCE, 0.0, 1.0);
