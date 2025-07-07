@@ -88,13 +88,6 @@ void main()
 	if (viewPos.y <= waterLevel)
 		isUnderwater = true;
 
-    vec2 centeredUV = uv - vec2(0.5);
-
-    float dist = length(centeredUV);
-
-	float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
-	vignette = mix(1.0, vignette, VignetteIntensity);
-
 	vec3 color = texture(screenTexture, uv).rgb;
 	float waterDepth = texture(depthTex, uv).r;
 
@@ -103,11 +96,17 @@ void main()
 		vec3 closeColor = vec3(0.3, 0.8, 0.87);
 		vec3 farColor = vec3(0.0, 0.2, 1.0);
     	vec3 waterColor = mix(closeColor, farColor, 1 - exp(-waterDepth * 10));
-		FragColor = vec4(vec3(mix(color, waterColor, 0.7) * vignette), 1.0);
-		return ;
+		color = vec3(mix(color, waterColor, 0.7));
 	}
 
-	// color = ditheredQuantize(TexCoords, color, 32); //Uncomment to have some beautiful dithering
+	color = ditheredQuantize(TexCoords, color, 32); //Uncomment to have some beautiful dithering
+
+    vec2 centeredUV = uv - vec2(0.5);
+
+    float dist = length(centeredUV);
+
+	float vignette = smoothstep(VignetteRadius, VignetteRadius - 0.3, dist);
+	vignette = mix(1.0, vignette, VignetteIntensity);
 
 	color = clamp(color, 0.0, 1.0);
 	FragColor = vec4(color * vignette, 1.0);
