@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 14:48:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/12 23:58:26 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:45:47 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ Font::~Font()
     if (fontVAO != 0)
     {
         if (DEBUG)
-            std::cout << "Destroying font quad" << std::endl;
+            consoleLog("Destroying font quad", LogSeverity::NORMAL);
         glDeleteBuffers(1, &fontVBO);
         glDeleteVertexArrays(1, &fontVAO);
         fontVBO = 0;
@@ -96,7 +96,7 @@ void	Font::initFontModel()
     if (fontVAO != 0) return;
         
     if (DEBUG)
-        std::cout << "Loading font quad" << std::endl;
+        consoleLog("Loading font quad", LogSeverity::NORMAL);
 
     float vertices[] = {
         0.0f, 0.0f,

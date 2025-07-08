@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 16:30:32 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:59:53 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,7 +61,10 @@ void	key_hook(GLFWwindow *window, int key, int scancode, int action, int mods)
 		if (!F3)
 			glfwSwapInterval(1);
 		else
+		{
+			consoleLog("WARNING: Debug mode is ON, more resources will be used.", LogSeverity::WARNING);
 			glfwSwapInterval(0);
+		}
 	}
 		
 }
@@ -222,6 +225,10 @@ struct	Engine
 		SHADER_MANAGER = &this->shaderManager;
 		build(SHADER_MANAGER);
 		TEXTURE_MANAGER = &this->textureManager;
+	}
+	~Engine()
+	{
+		consoleLog("Done.", LogSeverity::NORMAL);
 	}
 	Window				window;
 	Camera				camera;
@@ -514,6 +521,7 @@ class	World
 	public:
 		World()
 		{
+			consoleLog("Generating terrain", NORMAL);
 			for (int x = 0; x < 32; x++)
 			{
 				for (int y = 0; y < 32; y++)
@@ -522,6 +530,7 @@ class	World
 					regions.back()->generate();
 				}
 			}
+			consoleLog("Generating terrain, done", SUCCESS);
 		}
 		~World()
 		{
@@ -580,7 +589,6 @@ int	main(int ac, char **av)
 	try {
 		Engine	engine;
 
-		consoleLog("Loading skybox", NORMAL);
 		Skybox	skybox({SKYBOX_PATHES});
 		SKYBOX = &skybox;
 
@@ -594,11 +602,8 @@ int	main(int ac, char **av)
 			lastY = y;
 		}
 
-		consoleLog("Generating terrain", NORMAL);
-
 		World	world;
 
-		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
 		FrameBuffer	terrainDepthBuffer(FrameBufferType::DEPTH);
 		FrameBuffer	waterDepthBuffer(FrameBufferType::DEPTH);
@@ -616,7 +621,7 @@ int	main(int ac, char **av)
 
 		int	frame = 10;
 
-		consoleLog("Finished, starting rendering...", SUCCESS);
+		consoleLog("Starting rendering...", SUCCESS);
 		while (WINDOW->up())
 		{
 			WINDOW->loopStart();

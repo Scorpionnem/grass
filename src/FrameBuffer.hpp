@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/05 11:27:41 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 16:49:03 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:44:23 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,8 @@ class	FrameBuffer
 	public:
 		FrameBuffer()
 		{
+			if (DEBUG)
+				consoleLog("Creating color frame buffers", NORMAL);
 			this->type = FrameBufferType::DEFAULT;
 			glGenFramebuffers(1, &frameBufferID);
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
@@ -64,6 +66,8 @@ class	FrameBuffer
 		}
 		FrameBuffer(FrameBufferType type)
 		{
+			if (DEBUG)
+				consoleLog("Creating depth frame buffers", NORMAL);
 			this->type = type;
 			glGenFramebuffers(1, &frameBufferID);
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);

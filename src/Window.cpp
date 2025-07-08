@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:11:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 12:54:04 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:37:15 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,7 @@ void	move_mouse_hook(GLFWwindow* window, double xpos, double ypos);
 
 Window::Window() : _lastFrame(0)
 {
-	if (DEBUG)
-		std::cout << "Creating window: " << WIN_NAME << std::endl;
+	consoleLog("Creating window...", LogSeverity::NORMAL);
 	//Inits GLFW settings
 	if (!glfwInit())
 		throw std::runtime_error("Failed to initialize glfw");
@@ -67,12 +66,11 @@ Window::Window() : _lastFrame(0)
 	
 	this->center();
 	this->setIcon("textures/mbatty.bmp");
+	consoleLog("Creating window, done.", LogSeverity::SUCCESS);
 }
 
 Window::~Window()
 {
-	if (DEBUG)
-		std::cout << "Destroying window: " << WIN_NAME << std::endl;
 	glfwDestroyWindow(this->_windowData);
 	glfwTerminate();
 }

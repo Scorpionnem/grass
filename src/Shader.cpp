@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:15:58 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/12 23:43:38 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:46:51 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 Shader::~Shader()
 {
 	if (DEBUG)
-		std::cout << "Destroying shader: " << vertPath << " " << fragPath << std::endl;
+        consoleLog("Destroying shader: " + vertPath + " " + fragPath, LogSeverity::NORMAL);
 	glDeleteProgram(ID);
 }
 
@@ -92,7 +92,7 @@ static int	loadShaderProgram(const char *vertex, const char *fragment)
 Shader::Shader(const char *vertexPath, const char *fragmentPath)
 {
 	if (DEBUG)
-		std::cout << "Loading shader: " << vertexPath << " " << fragmentPath << std::endl;
+        consoleLog("Loading shader: " + std::string(vertexPath) + " " + std::string(fragmentPath), LogSeverity::NORMAL);
 		
 	std::string	vertexCode;
 	std::string	fragmentCode;

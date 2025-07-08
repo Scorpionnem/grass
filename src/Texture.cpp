@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 13:49:15 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/06 15:06:51 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:47:03 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@ Texture::~Texture()
 	if (ID > 0)
 	{
 		if (DEBUG)
-			std::cout << "Destroying texture: " << this->path << std::endl;
+			consoleLog("Destroying texture: " + std::string(path), LogSeverity::NORMAL);
 		glDeleteTextures(1, &ID);
 	}
 }
@@ -109,7 +109,7 @@ void	Texture::LoadImage(const char *path)
 Texture::Texture(const char *path)
 {
 	if (DEBUG)
-		std::cout << "Loading texture: " << path << std::endl;	
+		consoleLog("Loading texture: " + std::string(path), LogSeverity::NORMAL);
 	this->LoadImage(path);
 	glGenTextures(1, &this->ID);
 	glBindTexture(GL_TEXTURE_2D, this->ID);

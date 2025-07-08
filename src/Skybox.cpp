@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/08 15:22:58 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/24 15:55:47 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:45:05 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,7 @@ float skyboxVertices[] = {
 Skybox::~Skybox()
 {
     if (DEBUG)
-        std::cout << "Destroying skybox" << std::endl;
+        consoleLog("Destroying skybox", NORMAL);
 	glDeleteTextures(1, &ID);
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);
@@ -69,7 +69,7 @@ Skybox::Skybox(const std::vector<std::string> &faces)
 {
     model = glm::mat4(1);
     if (DEBUG)
-        std::cout << "Loading skybox" << std::endl;
+	    consoleLog("Loading skybox", NORMAL);
 
     glGenTextures(1, &ID);
     glBindTexture(GL_TEXTURE_CUBE_MAP, ID);
