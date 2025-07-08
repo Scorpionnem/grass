@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/05 11:27:41 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 20:47:47 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 16:49:03 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,11 +24,18 @@ extern float quadVertices[];
 extern unsigned int quadVAO;
 extern unsigned int quadVBO;
 
+enum	FrameBufferType
+{
+	DEFAULT,
+	DEPTH
+};
+
 class	FrameBuffer
 {
 	public:
 		FrameBuffer()
 		{
+			this->type = FrameBufferType::DEFAULT;
 			glGenFramebuffers(1, &frameBufferID);
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
 
@@ -55,21 +62,21 @@ class	FrameBuffer
 			FrameBuffer::loadQuadModel();
 			this->resizeToWindow();
 		}
-		FrameBuffer(bool depth)
+		FrameBuffer(FrameBufferType type)
 		{
-			(void)depth;
+			this->type = type;
 			glGenFramebuffers(1, &frameBufferID);
 			glBindFramebuffer(GL_FRAMEBUFFER, frameBufferID);
 
-			glGenTextures(1, &depthTextureID);
-			glBindTexture(GL_TEXTURE_2D, depthTextureID);
+			glGenTextures(1, &textureID);
+			glBindTexture(GL_TEXTURE_2D, textureID);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glBindTexture(GL_TEXTURE_2D, 0);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextureID, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textureID, 0);
 
 			RBO = 0;
 			
@@ -84,7 +91,6 @@ class	FrameBuffer
 		{
 			glDeleteFramebuffers(1, &frameBufferID);
 			glDeleteTextures(1, &textureID);
-			glDeleteTextures(1, &depthTextureID);
 			glDeleteRenderbuffers(1, &RBO);
 			if (quadVAO != 0)
 				glDeleteVertexArrays(1, &quadVAO);
@@ -101,10 +107,17 @@ class	FrameBuffer
 		{
 			this->width = width;
 			this->height = height;
+			
 			glBindTexture(GL_TEXTURE_2D, this->textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			if (type == FrameBufferType::DEPTH)
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			else
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			
 			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		}
 		void	resizeToWindow()
 		{
@@ -112,10 +125,17 @@ class	FrameBuffer
 			glfwGetWindowSize(WINDOW->getWindowData(), &width, &height);
 			this->width = width;
 			this->height = height;
+		
 			glBindTexture(GL_TEXTURE_2D, this->textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			if (type == FrameBufferType::DEPTH)
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			else
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		
 			glBindRenderbuffer(GL_RENDERBUFFER, this->RBO);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		}
 		void	use()
 		{
@@ -154,16 +174,16 @@ class	FrameBuffer
 		{
 			return (textureID);
 		}
-		unsigned int	getDepthTexture()
+		FrameBufferType	getType()
 		{
-			return (depthTextureID);
+			return (this->type);
 		}
 	private:
+		FrameBufferType	type;
 		float	width;
 		float	height;
 		unsigned int frameBufferID = 0;
 		unsigned int textureID = 0;
-		unsigned int depthTextureID = 0;
 		unsigned int RBO = 0;
 };
 

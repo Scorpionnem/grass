@@ -26,9 +26,19 @@ vec3 ditheredQuantize(vec2 TexPos, vec3 color, int levels) {
 	return (floor(clamp(dithered, 0.0, 1.0) * float(levels)) / float(levels));
 }
 
+float   near = 0.1;
+float   far = 448;
+
+float LinearizeDepth(float depth)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main()
 {
-	vec3 color = texture(screenTexture, TexPos).rgb;
+	// vec3 color = texture(screenTexture, TexPos).rgb;
+	vec3 color = vec3(LinearizeDepth(texture(screenTexture, TexPos).r) - near) / (far - near);
 
     // color = ditheredQuantize(TexPos, color, 8);
 

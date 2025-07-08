@@ -58,6 +58,7 @@ float   water_level = 15.0;
 
 float VignetteIntensity = 0.25;
 float VignetteRadius = 0.75;
+uniform float	RENDER_DISTANCE;
 
 vec3 ditheredQuantize(vec2 TexPos, vec3 color, int levels) {
 	// 4x4 Bayer matrix (values normalized to [0, 1])
@@ -78,13 +79,10 @@ vec3 ditheredQuantize(vec2 TexPos, vec3 color, int levels) {
 	return (floor(clamp(dithered, 0.0, 1.0) * float(levels)) / float(levels));
 }
 
-float   near = 0.1;
-float   far = 500;
-
-    float LinearizeDepth(float depth)
+float LinearizeDepth(float depth, float near, float far)
 {
     float z = depth * 2.0 - 1.0; // Back to NDC
-    return (2.0 * near * far) / (far + near - z * (far - near));
+    return (((2.0 * near * far) / (far + near - z * (far - near)) - near) / (far - near));
 }
 
 void main()
@@ -99,7 +97,7 @@ void main()
 
 	vec3 color = texture(screenTexture, uv).rgb;
 	float waterDepth = texture(depthTex, uv).r;
-	waterDepth = (LinearizeDepth(texture(depthTex, uv).r) - near) / (far - near);
+	waterDepth = LinearizeDepth(texture(depthTex, uv).r, 0.1, RENDER_DISTANCE);
 
 	if (isUnderwater)
 	{

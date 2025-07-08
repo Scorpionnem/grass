@@ -10,6 +10,7 @@ uniform vec3    viewPos;
 
 out vec3    Normal;
 out vec3    FragPos;
+out vec4    clipSpacePos;
 
 float hash(vec2 p)
 {
@@ -86,4 +87,5 @@ void main()
     Normal = mat3(transpose(inverse(model))) * normal;
 
     gl_Position = projection * view * worldPos;
+    clipSpacePos = gl_Position;
 }

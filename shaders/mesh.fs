@@ -8,27 +8,41 @@ in vec3	FragPos;
 uniform vec3    viewPos;
 
 uniform float RENDER_DISTANCE;
-float   fogDistance = RENDER_DISTANCE - (RENDER_DISTANCE / 3.5);
+float   fogDistance = RENDER_DISTANCE - (RENDER_DISTANCE / 2);
 
 uniform sampler2D   grass_texture;
 uniform sampler2D   stone_texture;
 uniform sampler2D   snow_texture;
+uniform sampler2D   depthTex;
 
 uniform bool    getDepth;
 uniform float   time;
 
 in vec4    worldPos;
+in vec4 clipSpacePos;
+
+float LinearizeDepth(float depth, float near, float far)
+{
+    float z = depth * 2.0 - 1.0; // Back to NDC
+    return (((2.0 * near * far) / (far + near - z * (far - near)) - near) / (far - near));
+}
+
+vec3 FOG_COLOR = vec3(0.6, 0.8, 1.0);
 
 void main()
 {
 	vec3 color = Normal;
     float   dist = length(FragPos - viewPos);
 
-    if (dist > fogDistance + 10)
-        discard ;
+    vec3 ndc = clipSpacePos.xyz / clipSpacePos.w;
+    ndc.xy = ndc.xy / 2 + 0.5;
 
-    float   distFarPlane = clamp(dist / RENDER_DISTANCE, 0.0, 1.0);
-    dist = clamp(dist / fogDistance, 0.0, 1.0);
+    float depthColor = texture(depthTex, ndc.xy).r;
+    float distToTerrain = LinearizeDepth(depthColor, 0.1, RENDER_DISTANCE);
+    float distToFog = LinearizeDepth(depthColor, 0.1, fogDistance);
+
+    // if (dist > RENDER_DISTANCE - 128)
+    //     discard ;
 
     float steepness = 1.0f - dot(Normal, vec3(0, 1, 0));
 
@@ -71,9 +85,6 @@ void main()
 
 
     FragColor = vec4(vec3(0), 1);
-    result = mix(result, vec3(0.6, 0.8, 1.0), dist);
-    if (getDepth)
-        FragColor.rgb = vec3(distFarPlane);
-    else
-        FragColor = vec4(result, 1.0);
+    result = mix(result, FOG_COLOR, distToFog);
+    FragColor = vec4(result, 1.0);
 }

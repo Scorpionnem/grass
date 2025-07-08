@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/07 20:48:03 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 16:30:32 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,6 +87,7 @@ void	build(ShaderManager *shader)
 	shader->get("mesh")->setInt("grass_texture", 0);
 	shader->get("mesh")->setInt("stone_texture", 1);
 	shader->get("mesh")->setInt("snow_texture", 2);
+	shader->get("mesh")->setInt("depthTex", 3);
 	shader->get("post")->use();
 	shader->get("post")->setInt("screenTexture", 0);
 	shader->get("post")->setInt("depthTex", 1);
@@ -96,6 +97,7 @@ void	build(ShaderManager *shader)
 	
 	shader->get("water")->use();
 	shader->get("water")->setInt("depthTex", 0);
+	shader->get("water")->setInt("waterDepthTex", 1);
 	consoleLog("Finished building shaders", LogSeverity::SUCCESS);
 }
 
@@ -140,21 +142,27 @@ void	update(ShaderManager *shaders)
 	Shader	*textShader = shaders->get("text");
 	Shader	*meshShader = shaders->get("mesh");
 	Shader	*waterShader = shaders->get("water");
+	Shader	*postShader = shaders->get("post");
 
 	textShader->use();
 	textShader->setFloat("time", glfwGetTime());
 	textShader->setFloat("SCREEN_WIDTH", SCREEN_WIDTH);
 	textShader->setFloat("SCREEN_HEIGHT", SCREEN_HEIGHT);
 
+	meshShader->use();
 	ACTIVE_CAMERA->setViewMatrix(*meshShader);
 	meshShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	meshShader->setFloat("time", glfwGetTime());
 	meshShader->setFloat("RENDER_DISTANCE", RENDER_DISTANCE);
 
+	waterShader->use();
 	ACTIVE_CAMERA->setViewMatrix(*waterShader);
 	waterShader->setVec3("viewPos", ACTIVE_CAMERA->pos);
 	waterShader->setFloat("time", glfwGetTime());
 	waterShader->setFloat("RENDER_DISTANCE", RENDER_DISTANCE);
+
+	postShader->use();
+	postShader->setFloat("RENDER_DISTANCE", RENDER_DISTANCE);
 }
 
 void	frame_key_hook(Window &window)
@@ -327,7 +335,8 @@ class	Mesh
 		glm::mat4		model;
 };
 
-unsigned int	depthTex;
+unsigned int	terrainDepthTex;
+unsigned int	waterDepthTex;
 
 void	render()
 {
@@ -347,7 +356,7 @@ void	handleSIGINT(int)
 
 #include "FrameBuffer.hpp"
 
-void	drawNoPost(glm::vec3 offset, FrameBuffer &buffer)
+void	drawDepthTex(glm::vec3 offset, FrameBuffer &buffer)
 {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -363,7 +372,7 @@ void	drawNoPost(glm::vec3 offset, FrameBuffer &buffer)
 	test->setMat4("model", model);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, buffer.getDepthTexture());
+	glBindTexture(GL_TEXTURE_2D, buffer.getTexture());
 
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -391,13 +400,17 @@ class	Chunk
 			shader->use();
 			TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
 			TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, terrainDepthTex);
 			terrain.draw(shader);
 		}
 		void	drawWater(Shader *shader)
 		{
 			shader->use();
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, depthTex);
+			glBindTexture(GL_TEXTURE_2D, terrainDepthTex);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, waterDepthTex);
 			water.draw(shader);
 		}
 		glm::vec3	getPos() {return (this->pos);}
@@ -587,18 +600,17 @@ int	main(int ac, char **av)
 
 		consoleLog("Creating frame buffers", NORMAL);
 		FrameBuffer	framebuffer;
-		FrameBuffer	terrainDepthBuffer(true);
-		FrameBuffer	waterDepthBuffer(true);
+		FrameBuffer	terrainDepthBuffer(FrameBufferType::DEPTH);
+		FrameBuffer	waterDepthBuffer(FrameBufferType::DEPTH);
 
-		depthTex = terrainDepthBuffer.getDepthTexture();
+		terrainDepthTex = terrainDepthBuffer.getTexture();
+		waterDepthTex = waterDepthBuffer.getTexture();
 
 		ACTIVE_CAMERA = CAMERA;
 
 		terrainDepthBuffer.resize(860, 520);
 		waterDepthBuffer.resize(860, 520);
 		framebuffer.resize(860, 520); //Lethal company size lol
-
-		CAMERA->pos = glm::vec3(100.0, 30.0, 100.0);
 
 		CAMERA->pos = glm::vec3(0, 0, 0);
 
@@ -615,27 +627,15 @@ int	main(int ac, char **av)
 			
 			world.computeVisibility();
 
-			SHADER_MANAGER->get("mesh")->use();
-			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
 			terrainDepthBuffer.use();
 			world.drawTerrain();
-			SHADER_MANAGER->get("mesh")->use();
-			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
 
-			SHADER_MANAGER->get("mesh")->use();
-			SHADER_MANAGER->get("mesh")->setBool("getDepth", true);
-			SHADER_MANAGER->get("water")->use();
-			SHADER_MANAGER->get("water")->setBool("getDepth", true);
 			waterDepthBuffer.use();
 			glDisable(GL_CULL_FACE);
 			world.drawWater();
 			glEnable(GL_CULL_FACE);
 			world.drawTerrain();
-			SHADER_MANAGER->get("mesh")->use();
-			SHADER_MANAGER->get("mesh")->setBool("getDepth", false);
-			SHADER_MANAGER->get("water")->use();
-			SHADER_MANAGER->get("water")->setBool("getDepth", false);
-
+			
 			framebuffer.use();
 			render();
 
@@ -645,13 +645,16 @@ int	main(int ac, char **av)
 
 			updatePostShader(SHADER_MANAGER);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getDepthTexture());
+			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getTexture());
 			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
 
 			drawUI();
 
-			drawNoPost(glm::vec3(1, 1, 1), terrainDepthBuffer);
-			drawNoPost(glm::vec3(3, 1, 3), waterDepthBuffer);
+			if (F3)
+			{
+				drawDepthTex(glm::vec3(1, 1, 1), terrainDepthBuffer);
+				drawDepthTex(glm::vec3(3, 1, 3), waterDepthBuffer);
+			}
 
 			frame_key_hook(*WINDOW);
 			WINDOW->loopEnd();

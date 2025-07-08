@@ -4,67 +4,58 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 
-uniform float RENDER_DISTANCE;
-float   fogDistance = RENDER_DISTANCE - (RENDER_DISTANCE / 3.5);
-
-uniform sampler2D depthTex;
-
 uniform vec3 viewPos;
+
 in vec4 worldPos;
 in vec4 clipSpacePos;
 
-uniform bool getDepth;
+uniform sampler2D terrainDepthTex;
+uniform sampler2D waterDepthTex;
+uniform float RENDER_DISTANCE;
+float fogDistance = RENDER_DISTANCE - (RENDER_DISTANCE / 2);
 
-float   near = 0.1;
-float   far = RENDER_DISTANCE;
+const vec3  FOG_COLOR = vec3(0.6, 0.8, 1.0);
+const vec3  SHORE_COLOR = vec3(0.3, 0.8, 0.87);
+const vec3  DEEP_COLOR = vec3(0.0, 0.2, 1.0); 
 
-    float LinearizeDepth(float depth)
+float LinearizeDepth(float depth, float near, float far)
 {
     float z = depth * 2.0 - 1.0; // Back to NDC
-    return (2.0 * near * far) / (far + near - z * (far - near));
+    return (((2.0 * near * far) / (far + near - z * (far - near)) - near) / (far - near));
 }
 
 void main()
 {
-    vec3 color = vec3(1);
-	vec3 closeColor = vec3(0.3, 0.8, 0.87);
-	vec3 farColor = vec3(0.0, 0.2, 1.0);
-    float   dist = length(FragPos - viewPos);
+    vec3 color = vec3(0.0);
 
-    if (dist > fogDistance + 10)
-        discard ;
+    //Gets screen pos of current pixel to then pick depth
+    vec3 ndc = clipSpacePos.xyz / clipSpacePos.w;
+    ndc.xy = ndc.xy / 2 + 0.5;
 
-    float farPlaneDist = clamp(dist / RENDER_DISTANCE, 0.0, 1.0);
-    dist = clamp(dist / fogDistance, 0.0, 1.0);
+    //FIGURE OUT WATER COLOR BASED ON AMOUNT TRAVERSED
+    //Takes depth value from texture
+    float terrainDepthValue = texture(terrainDepthTex, ndc.xy).r;
+    float distToTerrain = LinearizeDepth(terrainDepthValue, 0.1, RENDER_DISTANCE);
 
-    if (getDepth == true)
-    {
-        FragColor = vec4(vec3(farPlaneDist), 1.0);
-        return ;
-    }
+    float waterDepthValue = texture(waterDepthTex, ndc.xy).r;
+    float distToWater = LinearizeDepth(waterDepthValue, 0.1, RENDER_DISTANCE);
+    
+    //Gets the amount of water traversed (between terrain and surface of water)
+    float waterDepth = distToTerrain - distToWater;
 
-    vec3 viewDir = normalize(viewPos - FragPos);
+    color = mix(SHORE_COLOR, DEEP_COLOR, 1 - exp(-waterDepth * 20));
+    color = clamp(color, 0, 1);
+    //FIGURE OUT WATER COLOR BASED ON AMOUNT TRAVERSED
+
+    //DIRECTIONAL LIGHT
+    float   shininess = 256.0f;
+    float   actualShiness = 1;
+
+    vec3    viewDir = normalize(viewPos - FragPos);
     vec3    lightDirection = vec3(-0.8f, -0.4f, -0.45f);
     vec3    lightAmbient = vec3(0.2f, 0.2f, 0.2f);
     vec3    lightDiffuse = vec3(1.0f, 1.0f, 1.0f);
     vec3    lightSpecular = vec3(1.0f, 1.0f, 1.0f);
-    
-    float   shininess = 256.0f;
-    float   actualShiness = 1;
-
-
-    vec3 ndc = clipSpacePos.xyz / clipSpacePos.w;
-    ndc.xy = ndc.xy / 2 + 0.5;
-    float distToTerrain = texture(depthTex, ndc.xy).x;
-    distToTerrain = (LinearizeDepth(texture(depthTex, ndc.xy).r) - near) / (far - near);
-
-    float waterDist = length(FragPos - viewPos);
-    waterDist = clamp(waterDist / RENDER_DISTANCE, 0.0, 1.0);
-
-    float waterDepth = abs(distToTerrain - waterDist);
-
-    color = mix(closeColor, farColor, 1 - exp(-waterDepth * 10));
-    color = clamp(color, 0, 1);
 
     vec3 ambient = lightAmbient * color;
 
@@ -78,11 +69,13 @@ void main()
     vec3 specular = lightSpecular * spec * actualShiness;  
         
     vec3 result = ambient + diffuse + specular;
+    //DIRECTIONAL LIGHT
 
     // APPLY FOG
-    result = mix(result, vec3(0.6, 0.8, 1.0), dist);
+    result = mix(result, FOG_COLOR, distToWater);
     result = clamp(result, 0.0, 1.0);
 
+    //Water is opaque when light shines on it
     float   alpha = 0.8 + (specular.r / 2);
 
     FragColor = vec4(result, alpha);
