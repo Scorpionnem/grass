@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 17:59:53 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 19:59:21 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -363,7 +363,7 @@ void	handleSIGINT(int)
 
 #include "FrameBuffer.hpp"
 
-void	drawDepthTex(glm::vec3 offset, FrameBuffer &buffer)
+void	drawDepthTex(glm::vec3 offset, const unsigned int texture)
 {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -379,7 +379,7 @@ void	drawDepthTex(glm::vec3 offset, FrameBuffer &buffer)
 	test->setMat4("model", model);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, buffer.getTexture());
+	glBindTexture(GL_TEXTURE_2D, texture);
 
 	glBindVertexArray(quadVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -617,6 +617,10 @@ int	main(int ac, char **av)
 		waterDepthBuffer.resize(860, 520);
 		framebuffer.resize(860, 520); //Lethal company size lol
 
+		framebuffer.resizeToWindow();
+		waterDepthBuffer.resizeToWindow();
+		terrainDepthBuffer.resizeToWindow();
+
 		CAMERA->pos = glm::vec3(0, 0, 0);
 
 		int	frame = 10;
@@ -657,8 +661,8 @@ int	main(int ac, char **av)
 
 			if (F3)
 			{
-				drawDepthTex(glm::vec3(1, 1, 1), terrainDepthBuffer);
-				drawDepthTex(glm::vec3(3, 1, 3), waterDepthBuffer);
+				drawDepthTex(glm::vec3(1, 1, 1), terrainDepthBuffer.getTexture());
+				drawDepthTex(glm::vec3(3, 1, 3), waterDepthBuffer.getTexture());
 			}
 
 			frame_key_hook(*WINDOW);

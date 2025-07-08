@@ -33,10 +33,12 @@ void main()
     ndc.xy = ndc.xy / 2 + 0.5;
 
     //FIGURE OUT WATER COLOR BASED ON AMOUNT TRAVERSED
-    //Takes depth value from texture
+
+    //Takes terrain depth value from texture
     float terrainDepthValue = texture(terrainDepthTex, ndc.xy).r;
     float distToTerrain = LinearizeDepth(terrainDepthValue, 0.1, RENDER_DISTANCE);
 
+    //Takes water depth value from texture
     float waterDepthValue = texture(waterDepthTex, ndc.xy).r;
     float distToWater = LinearizeDepth(waterDepthValue, 0.1, RENDER_DISTANCE);
     

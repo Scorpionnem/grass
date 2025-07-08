@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:11:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 17:37:15 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/08 19:47:58 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,11 @@ Window::Window() : _lastFrame(0)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Creates and opens window
-	_windowData = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WIN_NAME, NULL, NULL);
+	GLFWmonitor	*monitor = glfwGetPrimaryMonitor();
+	const GLFWvidmode	*monitorInfos = glfwGetVideoMode(monitor);
+	SCREEN_HEIGHT = monitorInfos->height;
+	SCREEN_WIDTH = monitorInfos->width;
+	_windowData = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WIN_NAME, monitor, NULL);
 	if (!_windowData)
 	{
 		glfwTerminate();
