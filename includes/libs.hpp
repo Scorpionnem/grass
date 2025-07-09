@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:10 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/05 12:45:56 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 11:21:50 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@
 # include <algorithm>
 # include <deque>
 # include <memory>
+# include <csignal>
 
 # include "strings.hpp"
 

@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/12 20:55:06 by mbatty            #+#    #+#             */
-/*   Updated: 2025/06/12 23:54:57 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 15:08:43 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,10 +25,11 @@ class Camera
 {
 	public:
 		Camera();
-		void	update();
+		void		update();
 		glm::mat4	getViewMatrix();
+		void		setViewMatrix(Shader &shader);
+		
 		glm::vec3 direction;
-		void	setViewMatrix(Shader &shader);
 		glm::vec3	pos;
 		glm::vec3	front;
 		glm::vec3	up;
