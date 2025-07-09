@@ -10,6 +10,8 @@ out vec3    Normal;
 out vec3    WorldFragPos;
 out vec3    FragPos;
 
+out vec4    clipSpacePos;
+
 void main()
 {
     vec3 pos = aPos;
@@ -20,4 +22,5 @@ void main()
     WorldFragPos = worldPos.xyz;
 
     gl_Position = projection * view * worldPos;
+    clipSpacePos = gl_Position;
 }

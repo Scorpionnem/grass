@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 19:59:21 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 16:38:08 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,9 @@
 #include "Window.hpp"
 #include "Texture.hpp"
 #include "Skybox.hpp"
+#include "FrameBuffer.hpp"
+
+#define WORLD_SIZE 32
 
 float	FOV = 65;
 float	SCREEN_WIDTH = 860;
@@ -44,17 +47,25 @@ ShaderManager		*SHADER_MANAGER;
 float				lastX = SCREEN_WIDTH / 2;
 float				lastY = SCREEN_HEIGHT / 2;
 
+//Allocation handled by Engine
+FrameBuffer	*MAIN_FRAME_BUFFER;
+//Allocation handled by Engine
+FrameBuffer	*TERRAIN_DEPTH_BUFFER;
+//Allocation handled by Engine
+FrameBuffer	*WATER_DEPTH_BUFFER;
+
 void	keyboard_input(GLFWwindow *window, unsigned int key)
 {
 	(void)window;(void)key;
 }
 
-void	key_hook(GLFWwindow *window, int key, int scancode, int action, int mods)
+void	key_hook(GLFWwindow *window, int key, int, int action, int)
 {
-	(void)window;(void)key;(void)scancode;(void)action;(void)mods;
-
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS && WINDOW->up())
+	{
+		consoleLog("Quitting game.", LogSeverity::WARNING);
 		glfwSetWindowShouldClose(window, true);
+	}
 	if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
 	{
 		F3 = !F3;
@@ -66,7 +77,6 @@ void	key_hook(GLFWwindow *window, int key, int scancode, int action, int mods)
 			glfwSwapInterval(0);
 		}
 	}
-		
 }
 
 void	build(ShaderManager *shader)
@@ -82,25 +92,23 @@ void	build(ShaderManager *shader)
 	shader->load({"cube", "shaders/cube.vs", "shaders/cube.fs"});
 	shader->load({"grass", "shaders/grass.vs", "shaders/grass.fs"});
 
-	shader->get("text")->use();
-	shader->get("text")->setInt("tex0", 0);
-	shader->get("skybox")->use();
-	shader->get("skybox")->setInt("skybox", 0);
-	shader->get("mesh")->use();
-	shader->get("mesh")->setInt("grass_texture", 0);
-	shader->get("mesh")->setInt("stone_texture", 1);
-	shader->get("mesh")->setInt("snow_texture", 2);
-	shader->get("mesh")->setInt("depthTex", 3);
-	shader->get("post")->use();
-	shader->get("post")->setInt("screenTexture", 0);
-	shader->get("post")->setInt("depthTex", 1);
+	Texture::use("tex0", 0, 0, shader->get("text"));
+
+	Texture::use("skybox", 0, 0, shader->get("skybox"));
+
+	Texture::use("grass_texture", 0, 0, shader->get("mesh"));
+	Texture::use("stone_texture", 0, 1, shader->get("mesh"));
+	Texture::use("snow_texture", 0, 2, shader->get("mesh"));
+	Texture::use("depthTex", 0, 3, shader->get("mesh"));
+
+	Texture::use("screenTexture", 0, 0, shader->get("post"));
+	Texture::use("depthTex", 0, 1, shader->get("post"));
+
+	Texture::use("screenTexture", 0, 0, shader->get("test"));
+
+	Texture::use("depthTex", 0, 0, shader->get("water"));
+	Texture::use("waterDepthTex", 0, 1, shader->get("water"));
 	
-	shader->get("test")->use();
-	shader->get("test")->setInt("screenTexture", 0);
-	
-	shader->get("water")->use();
-	shader->get("water")->setInt("depthTex", 0);
-	shader->get("water")->setInt("waterDepthTex", 1);
 	consoleLog("Finished building shaders", LogSeverity::SUCCESS);
 }
 
@@ -186,9 +194,9 @@ void	frame_key_hook(Window &window)
 		CAMERA->pos = CAMERA->pos - CAMERA->up * (cameraSpeed * speedBoost);
 		
 	if (glfwGetKey(window.getWindowData(), GLFW_KEY_A) == GLFW_PRESS)
-		CAMERA->pos = CAMERA->pos - glm::cross(normalize(CAMERA->front), normalize(CAMERA->up)) * (cameraSpeed * speedBoost);
+		CAMERA->pos = CAMERA->pos - glm::normalize(glm::cross(CAMERA->front, CAMERA->up)) * (cameraSpeed * speedBoost);
 	if (glfwGetKey(window.getWindowData(), GLFW_KEY_D) == GLFW_PRESS)
-		CAMERA->pos = CAMERA->pos + glm::cross(normalize(CAMERA->front), normalize(CAMERA->up)) * (cameraSpeed * speedBoost);
+		CAMERA->pos = CAMERA->pos + glm::normalize(glm::cross(CAMERA->front, CAMERA->up)) * (cameraSpeed * speedBoost);
 }
 
 void	move_mouse_hook(GLFWwindow* window, double xpos, double ypos)
@@ -225,9 +233,15 @@ struct	Engine
 		SHADER_MANAGER = &this->shaderManager;
 		build(SHADER_MANAGER);
 		TEXTURE_MANAGER = &this->textureManager;
+		MAIN_FRAME_BUFFER = new FrameBuffer;
+		TERRAIN_DEPTH_BUFFER = new FrameBuffer(FrameBufferType::DEPTH);
+		WATER_DEPTH_BUFFER = new FrameBuffer(FrameBufferType::DEPTH);
 	}
 	~Engine()
 	{
+		delete MAIN_FRAME_BUFFER;
+		delete TERRAIN_DEPTH_BUFFER;
+		delete WATER_DEPTH_BUFFER;
 		consoleLog("Done.", LogSeverity::NORMAL);
 	}
 	Window				window;
@@ -327,6 +341,45 @@ class	Mesh
 				}
 			}
 		}
+		void generateCube()
+		{
+			vertices.clear();
+			indices.clear();
+		
+			// Cube vertices (same as before)
+			vertices = {
+				{-0.5f, -0.5f, -0.5f}, // 0
+				{ 0.5f, -0.5f, -0.5f}, // 1
+				{ 0.5f,  0.5f, -0.5f}, // 2
+				{-0.5f,  0.5f, -0.5f}, // 3
+				{-0.5f, -0.5f,  0.5f}, // 4
+				{ 0.5f, -0.5f,  0.5f}, // 5
+				{ 0.5f,  0.5f,  0.5f}, // 6
+				{-0.5f,  0.5f,  0.5f}  // 7
+			};
+		
+			// Fixed clockwise winding for each face (when viewed from outside)
+			indices = {
+				// Back face
+				0, 1, 2,
+				2, 3, 0,
+				// Front face
+				6, 5, 4,
+				4, 7, 6,
+				// Left face
+				7, 4, 0,
+				0, 3, 7,
+				// Right face
+				1, 5, 6,
+				6, 2, 1,
+				// Bottom face
+				0, 4, 5,
+				5, 1, 0,
+				// Top face
+				3, 2, 6,
+				6, 7, 3
+			};
+		}
 		glm::vec3	getPos(){return (this->pos);}
 		glm::vec3	getScale(){return (this->scale);}
 		void	setPos(glm::vec3 pos){this->pos = pos;}
@@ -353,15 +406,6 @@ void	render()
 void	update()
 {
 }
-
-#include <csignal>
-
-void	handleSIGINT(int)
-{
-	glfwSetWindowShouldClose(WINDOW->getWindowData(), true);
-}
-
-#include "FrameBuffer.hpp"
 
 void	drawDepthTex(glm::vec3 offset, const unsigned int texture)
 {
@@ -405,19 +449,19 @@ class	Chunk
 		void	drawTerrain(Shader *shader)
 		{
 			shader->use();
-			TEXTURE_MANAGER->get("textures/moss_block.bmp")->use();
-			TEXTURE_MANAGER->get("textures/stone.bmp")->use1();
+			TEXTURE_MANAGER->get("textures/moss_block.bmp")->use(0);
+			TEXTURE_MANAGER->get("textures/stone.bmp")->use(1);
 			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, terrainDepthTex);
+			glBindTexture(GL_TEXTURE_2D, TERRAIN_DEPTH_BUFFER->getTexture());
 			terrain.draw(shader);
 		}
 		void	drawWater(Shader *shader)
 		{
 			shader->use();
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, terrainDepthTex);
+			glBindTexture(GL_TEXTURE_2D, TERRAIN_DEPTH_BUFFER->getTexture());
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, waterDepthTex);
+			glBindTexture(GL_TEXTURE_2D, WATER_DEPTH_BUFFER->getTexture());
 			water.draw(shader);
 		}
 		glm::vec3	getPos() {return (this->pos);}
@@ -522,9 +566,9 @@ class	World
 		World()
 		{
 			consoleLog("Generating terrain", NORMAL);
-			for (int x = 0; x < 32; x++)
+			for (uint x = 0; x < WORLD_SIZE; x++)
 			{
-				for (int y = 0; y < 32; y++)
+				for (uint y = 0; y < WORLD_SIZE; y++)
 				{
 					regions.push_back(new Region(glm::vec3(x, 0, y)));
 					regions.back()->generate();
@@ -579,13 +623,10 @@ class	World
 		std::vector<Region *>	visibleRegions;
 };
 
-int	main(int ac, char **av)
+int	main(void)
 {
-	(void)ac;(void)av;
-	std::signal(SIGINT, handleSIGINT);
-
 	consoleLog("Starting...", NORMAL);
-	
+
 	try {
 		Engine	engine;
 
@@ -604,28 +645,15 @@ int	main(int ac, char **av)
 
 		World	world;
 
-		FrameBuffer	framebuffer;
-		FrameBuffer	terrainDepthBuffer(FrameBufferType::DEPTH);
-		FrameBuffer	waterDepthBuffer(FrameBufferType::DEPTH);
-
-		terrainDepthTex = terrainDepthBuffer.getTexture();
-		waterDepthTex = waterDepthBuffer.getTexture();
-
 		ACTIVE_CAMERA = CAMERA;
 
-		terrainDepthBuffer.resize(860, 520);
-		waterDepthBuffer.resize(860, 520);
-		framebuffer.resize(860, 520); //Lethal company size lol
-
-		framebuffer.resizeToWindow();
-		waterDepthBuffer.resizeToWindow();
-		terrainDepthBuffer.resizeToWindow();
+		// MAIN_FRAME_BUFFER->resize(860, 520); //Lethal company size lol
+		// TERRAIN_DEPTH_BUFFER->resize(860, 520);
+		// WATER_DEPTH_BUFFER->resize(860, 520);
 
 		CAMERA->pos = glm::vec3(0, 0, 0);
 
-		int	frame = 10;
-
-		consoleLog("Starting rendering...", SUCCESS);
+		consoleLog("Starting rendering...", NORMAL);
 		while (WINDOW->up())
 		{
 			WINDOW->loopStart();
@@ -634,18 +662,22 @@ int	main(int ac, char **av)
 			update(SHADER_MANAGER);
 			update();
 			
+			MAIN_FRAME_BUFFER->resizeToWindow();
+			WATER_DEPTH_BUFFER->resizeToWindow();
+			TERRAIN_DEPTH_BUFFER->resizeToWindow();
+
 			world.computeVisibility();
 
-			terrainDepthBuffer.use();
+			TERRAIN_DEPTH_BUFFER->use();
 			world.drawTerrain();
 
-			waterDepthBuffer.use();
+			WATER_DEPTH_BUFFER->use();
 			glDisable(GL_CULL_FACE);
 			world.drawWater();
 			glEnable(GL_CULL_FACE);
 			world.drawTerrain();
-			
-			framebuffer.use();
+
+			MAIN_FRAME_BUFFER->use();
 			render();
 
 			world.drawBoth();
@@ -653,16 +685,15 @@ int	main(int ac, char **av)
 			FrameBuffer::reset();
 
 			updatePostShader(SHADER_MANAGER);
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, waterDepthBuffer.getTexture());
-			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), framebuffer.getTexture());
+			Texture::use(WATER_DEPTH_BUFFER->getTexture(), 1);
+			FrameBuffer::drawFrame(SHADER_MANAGER->get("post"), MAIN_FRAME_BUFFER->getTexture());
 
 			drawUI();
 
 			if (F3)
 			{
-				drawDepthTex(glm::vec3(1, 1, 1), terrainDepthBuffer.getTexture());
-				drawDepthTex(glm::vec3(3, 1, 3), waterDepthBuffer.getTexture());
+				drawDepthTex(glm::vec3(1, 1, 1), TERRAIN_DEPTH_BUFFER->getTexture());
+				drawDepthTex(glm::vec3(3, 1, 3), WATER_DEPTH_BUFFER->getTexture());
 			}
 
 			frame_key_hook(*WINDOW);
