@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:11:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 19:47:58 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 15:04:50 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,11 +36,12 @@ Window::Window() : _lastFrame(0)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Creates and opens window
-	GLFWmonitor	*monitor = glfwGetPrimaryMonitor();
-	const GLFWvidmode	*monitorInfos = glfwGetVideoMode(monitor);
-	SCREEN_HEIGHT = monitorInfos->height;
-	SCREEN_WIDTH = monitorInfos->width;
-	_windowData = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WIN_NAME, monitor, NULL);
+	// GLFWmonitor	*monitor = glfwGetPrimaryMonitor();
+	// const GLFWvidmode	*monitorInfos = glfwGetVideoMode(monitor);
+	// SCREEN_HEIGHT = monitorInfos->height;
+	// SCREEN_WIDTH = monitorInfos->width;
+	// _windowData = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WIN_NAME, monitor, NULL);
+	_windowData = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WIN_NAME, NULL, NULL);
 	if (!_windowData)
 	{
 		glfwTerminate();
@@ -118,9 +119,9 @@ void		Window::setIcon(const char *path)
 {
 	Texture	tex(path);
 	GLFWimage	image[1];
-	image[0].pixels = tex.data.data();
-	image[0].width = tex.width;
-	image[0].height = tex.height;
+	image[0].pixels = tex.getData().data();
+	image[0].width = tex.getWidth();
+	image[0].height = tex.getHeight();
 	glfwSetWindowIcon(_windowData, 1, image);
 }
 

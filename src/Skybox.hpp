@@ -13,10 +13,11 @@ class	Skybox
 		Skybox(const std::vector<std::string> &faces);
 		void	draw(Camera &camera, Shader &shader);
 
-		unsigned int	ID;
-		unsigned int	VAO;
-		unsigned int	VBO;
-		glm::mat4    		model;
+	private:
+		unsigned int		ID;
+		unsigned int		VAO;
+		unsigned int		VBO;
+		glm::mat4			model;
 };
 
 #endif

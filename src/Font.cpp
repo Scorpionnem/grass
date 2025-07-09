@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 14:48:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 17:45:47 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 15:05:05 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,14 +48,14 @@ Font::Font()
 
 Texture &Font::operator[](char c)
 {
-	if (c < 0 || c > 127 || font[c].ID <= 0)
+	if (c < 0 || c > 127 || font[c].getID() <= 0)
 		return (font[127]);
 	return (font[c]);
 }
 
 Texture	&Font::getChar(char c)
 {
-	if (c < 0 || c > 127 || font[c].ID <= 0)
+	if (c < 0 || c > 127 || font[c].getID() <= 0)
 		return (font[127]);
 	return (font[c]);
 }
@@ -66,7 +66,7 @@ void    Font::putChar(char c, Shader &shader, glm::vec2 pos, glm::vec2 size)
         return ;
     initFontModel();
     shader.use();
-    getChar(c).use();
+    getChar(c).use(0);
     
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, pos.y, 0.0f));
     model = glm::scale(model, glm::vec3(size.x, size.y, 1.0f));

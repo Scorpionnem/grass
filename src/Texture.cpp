@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 13:49:15 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/08 17:47:03 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 11:03:51 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,28 +124,30 @@ Texture::Texture(const char *path)
 	this->path = path;
 }
 
-void	Texture::use(void)
+void	Texture::use(int offset)
 {
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0 + offset);
 	glBindTexture(GL_TEXTURE_2D, this->ID);
 }
 
-void	Texture::use1(void)
+void	Texture::use(const char *uniformName, int offset, Shader *shader)
 {
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, this->ID);
+	shader->use();
+	shader->setInt(uniformName, offset);
+	this->use(offset);
 }
 
-void	Texture::use2(void)
+void	Texture::use(const char *uniformName, int textureID, int offset, Shader *shader)
 {
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, this->ID);
+	shader->use();
+	shader->setInt(uniformName, offset);
+	Texture::use(textureID, offset);
 }
 
-void	Texture::use3(void)
+void	Texture::use(int textureID, int offset)
 {
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, this->ID);
+	glActiveTexture(GL_TEXTURE0 + offset);
+	glBindTexture(GL_TEXTURE_2D, textureID);	
 }
 
 void	Texture::reset(void)

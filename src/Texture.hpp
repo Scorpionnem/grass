@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 13:48:51 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/06 15:06:56 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 15:05:56 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,12 @@
 # define TEXTURE_HPP
 
 # include "libs.hpp"
+# include "Shader.hpp"
 
 class	Texture
 {
 	public:
+		~Texture();
 		Texture(void)
 		{
 			this->ID = 0;
@@ -34,18 +36,24 @@ class	Texture
 		//Takes ID from cpy (rendering it useless) its pretty much a moove assignor
 		void	cut(Texture &cpy);
 		void	LoadImage(const char *path);
-		~Texture();
-		void	use(void);
-		void	use1(void);
-		void	use2(void);
-		void	use3(void);
+		void	use(int offset);
+		void	use(const char *uniformName, int offset, Shader *shader);
+		
+		static void	use(int textureID, int offset);
+		static void	use(const char *uniformName, int textureID, int offset, Shader *shader);
 		static void	reset(void);
-		unsigned int	ID;
-		std::vector<unsigned char>	data;
-		int	width;
-		int	height;
-		std::string	path;
+
+		uint	getID() {return (this->ID);}
+		std::vector<unsigned char>	&getData() {return (this->data);}
+		int	getWidth() {return (this->width);}
+		int	getHeight() {return (this->height);}
+		
 	private:
+		unsigned int				ID;
+		std::vector<unsigned char>	data;
+		int							width;
+		int							height;
+		std::string					path;
 };
 
 #endif
