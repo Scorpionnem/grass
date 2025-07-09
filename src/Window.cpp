@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:11:45 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/09 15:04:50 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:32:10 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,16 +83,6 @@ Window::~Window()
 GLFWwindow	*Window::getWindowData(void)
 {
 	return (this->_windowData);
-}
-
-std::string Window::displayFPS(Font &font, Shader &textShader)
-{
-	(void)font;(void)textShader;
-	std::stringstream	strs;
-	strs << (int)(1.0f / _deltaTime) << " fps";
-
-	std::string	str = strs.str();
-	return (str);
 }
 
 void		Window::loopStart(void)

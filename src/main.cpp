@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:29 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/09 16:38:08 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:48:19 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,42 +79,51 @@ void	key_hook(GLFWwindow *window, int key, int, int action, int)
 	}
 }
 
+void	build(TextureManager *textures)
+{
+	consoleLog("Loading textures...", LogSeverity::NORMAL);
+	textures->load("textures/mbatty.bmp");
+	textures->load("textures/stone.bmp");
+	textures->load("textures/moss_block.bmp");
+	consoleLog("Finished loading textures", LogSeverity::SUCCESS);
+}
+
 void	build(ShaderManager *shader)
 {
 	consoleLog("Building shaders...", LogSeverity::NORMAL);
-	shader->load({"text", TEXT_VERT_SHADER, TEXT_FRAG_SHADER});
-	shader->load({"skybox", SKYBOX_VERT_SHADER, SKYBOX_FRAG_SHADER});
-	shader->load({"mesh", "shaders/mesh.vs", "shaders/mesh.fs"});
-	shader->load({"water", "shaders/water.vs", "shaders/water.fs"});
-	shader->load({"post", "shaders/post.vs", "shaders/post.fs"});
+	Shader *textShader = shader->load({"text", TEXT_VERT_SHADER, TEXT_FRAG_SHADER});
+	Shader *skyboxShader = shader->load({"skybox", SKYBOX_VERT_SHADER, SKYBOX_FRAG_SHADER});
+	Shader *meshShader = shader->load({"mesh", "shaders/mesh.vs", "shaders/mesh.fs"});
+	Shader *waterShader = shader->load({"water", "shaders/water.vs", "shaders/water.fs"});
+	Shader *postShader = shader->load({"post", "shaders/post.vs", "shaders/post.fs"});
 
 	shader->load({"test", "shaders/test.vs", "shaders/test.fs"});
 	shader->load({"cube", "shaders/cube.vs", "shaders/cube.fs"});
 	shader->load({"grass", "shaders/grass.vs", "shaders/grass.fs"});
 
-	Texture::use("tex0", 0, 0, shader->get("text"));
+	Texture::use("tex0", 0, 0, textShader);
 
-	Texture::use("skybox", 0, 0, shader->get("skybox"));
+	Texture::use("skybox", 0, 0, skyboxShader);
 
-	Texture::use("grass_texture", 0, 0, shader->get("mesh"));
-	Texture::use("stone_texture", 0, 1, shader->get("mesh"));
-	Texture::use("snow_texture", 0, 2, shader->get("mesh"));
-	Texture::use("depthTex", 0, 3, shader->get("mesh"));
+	Texture::use("grass_texture", 0, 0, meshShader);
+	Texture::use("stone_texture", 0, 1, meshShader);
+	Texture::use("snow_texture", 0, 2, meshShader);
+	Texture::use("depthTex", 0, 3, meshShader);
 
-	Texture::use("screenTexture", 0, 0, shader->get("post"));
-	Texture::use("depthTex", 0, 1, shader->get("post"));
+	Texture::use("screenTexture", 0, 0, postShader);
+	Texture::use("depthTex", 0, 1, postShader);
 
-	Texture::use("screenTexture", 0, 0, shader->get("test"));
+	Texture::use("screenTexture", 0, 0, (*shader)["test"]);
 
-	Texture::use("depthTex", 0, 0, shader->get("water"));
-	Texture::use("waterDepthTex", 0, 1, shader->get("water"));
-	
+	Texture::use("depthTex", 0, 0, waterShader);
+	Texture::use("waterDepthTex", 0, 1, waterShader);
+
 	consoleLog("Finished building shaders", LogSeverity::SUCCESS);
 }
 
 std::string	getFPSString()
 {
-	currentFPS = (int)(1.0f / WINDOW->_deltaTime);
+	currentFPS = (int)(1.0f / WINDOW->getDeltaTime());
 	return (std::to_string(currentFPS) + " fps");
 }
 
@@ -233,15 +242,18 @@ struct	Engine
 		SHADER_MANAGER = &this->shaderManager;
 		build(SHADER_MANAGER);
 		TEXTURE_MANAGER = &this->textureManager;
-		MAIN_FRAME_BUFFER = new FrameBuffer;
+		build(TEXTURE_MANAGER);
+		MAIN_FRAME_BUFFER = new FrameBuffer(FrameBufferType::DEFAULT);
 		TERRAIN_DEPTH_BUFFER = new FrameBuffer(FrameBufferType::DEPTH);
 		WATER_DEPTH_BUFFER = new FrameBuffer(FrameBufferType::DEPTH);
+		SKYBOX = new Skybox({SKYBOX_PATHES});
 	}
 	~Engine()
 	{
 		delete MAIN_FRAME_BUFFER;
 		delete TERRAIN_DEPTH_BUFFER;
 		delete WATER_DEPTH_BUFFER;
+		delete SKYBOX;
 		consoleLog("Done.", LogSeverity::NORMAL);
 	}
 	Window				window;
@@ -630,11 +642,6 @@ int	main(void)
 	try {
 		Engine	engine;
 
-		Skybox	skybox({SKYBOX_PATHES});
-		SKYBOX = &skybox;
-
-		CAMERA->pos.z = 0;
-
 		{
 			double	x,y;
 			glfwSetInputMode(WINDOW->getWindowData(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -700,7 +707,7 @@ int	main(void)
 			WINDOW->loopEnd();
 		}
 	} catch (const std::exception &e) {
-		consoleLog("Program crashed: " + std::string(e.what()), LogSeverity::MELTDOWN);
+		consoleLog("Program terminated: " + std::string(e.what()), LogSeverity::MELTDOWN);
 		return (1);
 	}
 }

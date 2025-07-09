@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/10 13:33:10 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/09 11:21:50 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:48:15 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,7 @@ enum	LogSeverity
 
 #define YELLOW "\033[33m"
 #define RED "\033[31m"
-#define RED_FULL "\033[30;41m"
+#define RED_FULL "\033[29;41m"
 #define RESET "\033[0m"
 #define GREEN "\033[32m"
 

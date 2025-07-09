@@ -6,7 +6,7 @@
 /*   By: mbatty <mbatty@student.42angouleme.fr>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/08 12:22:51 by mbatty            #+#    #+#             */
-/*   Updated: 2025/07/09 15:22:57 by mbatty           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:07:33 by mbatty           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,11 @@ class	TextureManager
 
 		Texture	*load(const std::string &path)
 		{
+			if (loadedTextures.find(path) != loadedTextures.end())
+			{
+				consoleLog("WARNING Tried to load a texture thats already loaded (will be using the existing texture): " + path, LogSeverity::WARNING);
+				return (this->get(path));
+			}
 			return (loadedTextures.insert({path, new Texture(path.c_str())}).first->second);
 		}
 
